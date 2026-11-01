@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
+import 'firebase_options.dart';
 import 'models/transaction_model.dart';
 import 'services/api_service.dart';
 import 'widgets/charts_panel.dart';
 
 void main() {
-  runApp(DompetKuApp(apiClient: HttpExpenseApiClient()));
+  runApp(
+    DompetKuApp(
+      apiClient: HttpExpenseApiClient(),
+      firebaseClient: FirebaseExpenseApiClient(
+        options: DefaultFirebaseOptions.currentPlatform,
+      ),
+    ),
+  );
 }
 
 class DompetKuColors {
@@ -23,13 +31,18 @@ class DompetKuColors {
 
 class DompetKuApp extends StatelessWidget {
   final ExpenseApiClient apiClient;
+  final ExpenseApiClient? firebaseClient;
 
-  const DompetKuApp({super.key, required this.apiClient});
+  const DompetKuApp({
+    super.key,
+    required this.apiClient,
+    this.firebaseClient,
+  });
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'DompetKu Docker Pro — Fintech Expense & 5-Container Lab',
+      title: 'DompetKu Docker Pro — Fintech Expense & Firebase Cloud',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -42,15 +55,23 @@ class DompetKuApp extends StatelessWidget {
         ),
         useMaterial3: true,
       ),
-      home: ExpenseDashboardPage(apiClient: apiClient),
+      home: ExpenseDashboardPage(
+        apiClient: apiClient,
+        firebaseClient: firebaseClient,
+      ),
     );
   }
 }
 
 class ExpenseDashboardPage extends StatefulWidget {
   final ExpenseApiClient apiClient;
+  final ExpenseApiClient? firebaseClient;
 
-  const ExpenseDashboardPage({super.key, required this.apiClient});
+  const ExpenseDashboardPage({
+    super.key,
+    required this.apiClient,
+    this.firebaseClient,
+  });
 
   @override
   State<ExpenseDashboardPage> createState() => _ExpenseDashboardPageState();
@@ -60,10 +81,19 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
   FinancialSummary? _summary;
   List<ExpenseTransaction> _transactions = const [];
   bool _isLoading = true;
+  bool _isSyncingFirebase = false;
   String? _errorMessage;
   String _selectedFilter = 'all'; // 'all' | 'income' | 'expense'
   String _searchQuery = '';
+  String _activeEngine = 'docker'; // 'docker' | 'firebase'
   final TextEditingController _searchController = TextEditingController();
+
+  ExpenseApiClient get _currentClient {
+    if (_activeEngine == 'firebase') {
+      return widget.firebaseClient ?? FirebaseExpenseApiClient();
+    }
+    return widget.apiClient;
+  }
 
   static const List<String> _expenseCategories = [
     'Makanan',
@@ -102,9 +132,10 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     });
 
     try {
+      final client = _currentClient;
       final results = await Future.wait([
-        widget.apiClient.fetchSummary(),
-        widget.apiClient.fetchTransactions(
+        client.fetchSummary(),
+        client.fetchTransactions(
           type: _selectedFilter == 'all' ? null : _selectedFilter,
           search: _searchQuery,
         ),
@@ -125,9 +156,48 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     }
   }
 
+  Future<void> _handleSyncToFirebase() async {
+    if (_isSyncingFirebase) return;
+    setState(() => _isSyncingFirebase = true);
+    try {
+      final dockerItems = await widget.apiClient.fetchTransactions();
+      final fbClient = widget.firebaseClient;
+      int syncedCount = 0;
+      if (fbClient is FirebaseExpenseApiClient) {
+        syncedCount = await fbClient.syncFromDocker(dockerItems);
+      } else {
+        final realFb = FirebaseExpenseApiClient();
+        syncedCount = await realFb.syncFromDocker(dockerItems);
+      }
+      if (!mounted) return;
+      setState(() {
+        _isSyncingFirebase = false;
+        _activeEngine = 'firebase';
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Berhasil sinkronisasi $syncedCount transaksi dari Docker ke Firebase Cloud (dompetku-4a2e1)!',
+          ),
+          backgroundColor: DompetKuColors.incomeGreen,
+        ),
+      );
+      await _loadData();
+    } catch (e) {
+      if (!mounted) return;
+      setState(() => _isSyncingFirebase = false);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal sync ke Firebase: $e'),
+          backgroundColor: DompetKuColors.expenseRed,
+        ),
+      );
+    }
+  }
+
   Future<void> _handleFlushRedis() async {
     try {
-      await widget.apiClient.flushRedisCache();
+      await _currentClient.flushRedisCache();
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
@@ -151,7 +221,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
 
   Future<void> _handleDelete(ExpenseTransaction tx) async {
     try {
-      await widget.apiClient.deleteTransaction(tx.id);
+      await _currentClient.deleteTransaction(tx.id);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -175,7 +245,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     final saved = await showDialog<bool>(
       context: context,
       builder: (ctx) => TransactionFormDialog(
-        apiClient: widget.apiClient,
+        apiClient: _currentClient,
         expenseCategories: _expenseCategories,
         incomeCategories: _incomeCategories,
         existingTransaction: existing,
@@ -201,7 +271,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             SizedBox(width: 10),
             Expanded(
               child: Text(
-                'Panduan Login Adminer DB GUI (:8081)',
+                'Panduan Database: Docker Adminer & Firebase Cloud',
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
               ),
             ),
@@ -212,15 +282,31 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             Text(
-              'Buka http://localhost:8081 di tab browser baru, lalu isi form login dengan kredensial container PostgreSQL berikut:',
-              style: TextStyle(fontSize: 13, color: DompetKuColors.textMuted),
+              '1. Docker Local DB GUI (http://localhost:8081):',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: DompetKuColors.textPrimary,
+              ),
             ),
-            SizedBox(height: 14),
+            SizedBox(height: 8),
             _CredentialItem(label: 'System', value: 'PostgreSQL'),
             _CredentialItem(label: 'Server', value: 'db'),
             _CredentialItem(label: 'Username', value: 'dompetku'),
             _CredentialItem(label: 'Password', value: 'dompetku_secret'),
             _CredentialItem(label: 'Database', value: 'dompetku_db'),
+            SizedBox(height: 12),
+            Text(
+              '2. Production Cloud DB (Tanpa VPS):',
+              style: TextStyle(
+                fontSize: 13,
+                fontWeight: FontWeight.w700,
+                color: DompetKuColors.warningAmber,
+              ),
+            ),
+            SizedBox(height: 6),
+            _CredentialItem(label: 'Project ID', value: 'dompetku-4a2e1'),
+            _CredentialItem(label: 'Database', value: 'Cloud Firestore (asia-southeast2)'),
           ],
         ),
         actions: [
@@ -263,7 +349,8 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final summary = _summary;
-    final isHit = summary?.cacheStatus == 'HIT';
+    final isHit =
+        summary?.cacheStatus == 'HIT' || summary?.cacheStatus == 'CLOUD';
 
     return Scaffold(
       appBar: AppBar(
@@ -302,7 +389,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                     ),
                   ),
                   Text(
-                    '5-Container Stack: Flutter • Node.js • Postgres • Redis • Adminer',
+                    'Hybrid Architecture: 5-Container Docker Stack + Firebase Cloud DB',
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
@@ -317,7 +404,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
         actions: [
           IconButton(
             key: const Key('adminer-info-button'),
-            tooltip: 'Info Login Database GUI (Adminer :8081)',
+            tooltip: 'Info Login Database GUI (Adminer :8081 & Firebase)',
             onPressed: _showAdminerGuideDialog,
             icon: const Icon(Icons.storage_rounded, size: 20),
           ),
@@ -379,12 +466,82 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
   Widget _buildDockerTelemetryStrip(FinancialSummary summary, bool isHit) {
     final badgeColor =
         isHit ? DompetKuColors.incomeGreen : DompetKuColors.warningAmber;
+    final isDocker = _activeEngine == 'docker';
+
     return Padding(
       padding: const EdgeInsets.only(bottom: 10),
       child: Wrap(
         spacing: 8,
         runSpacing: 8,
+        crossAxisAlignment: WrapCrossAlignment.center,
         children: [
+          ChoiceChip(
+            key: const Key('engine-docker-chip'),
+            label: const Text('🐳 Docker Stack'),
+            selected: isDocker,
+            onSelected: (_) {
+              if (_activeEngine != 'docker') {
+                setState(() => _activeEngine = 'docker');
+                _loadData();
+              }
+            },
+            selectedColor: DompetKuColors.primary,
+            backgroundColor: DompetKuColors.card,
+            visualDensity: VisualDensity.compact,
+            labelStyle: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: isDocker
+                  ? DompetKuColors.textPrimary
+                  : DompetKuColors.textMuted,
+            ),
+          ),
+          ChoiceChip(
+            key: const Key('engine-firebase-chip'),
+            label: const Text('🔥 Firebase Cloud (dompetku-4a2e1)'),
+            selected: !isDocker,
+            onSelected: (_) {
+              if (_activeEngine != 'firebase') {
+                setState(() => _activeEngine = 'firebase');
+                _loadData();
+              }
+            },
+            selectedColor: DompetKuColors.warningAmber.withValues(alpha: 0.28),
+            backgroundColor: DompetKuColors.card,
+            visualDensity: VisualDensity.compact,
+            labelStyle: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w700,
+              color: !isDocker
+                  ? DompetKuColors.warningAmber
+                  : DompetKuColors.textMuted,
+            ),
+          ),
+          ActionChip(
+            key: const Key('sync-firebase-button'),
+            avatar: _isSyncingFirebase
+                ? const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  )
+                : const Icon(
+                    Icons.cloud_upload_outlined,
+                    size: 14,
+                    color: DompetKuColors.warningAmber,
+                  ),
+            label: Text(
+              _isSyncingFirebase ? 'Syncing...' : 'Sync Docker ➔ Firebase',
+              style: const TextStyle(
+                fontSize: 11,
+                fontWeight: FontWeight.w600,
+                color: DompetKuColors.textPrimary,
+              ),
+            ),
+            backgroundColor: DompetKuColors.card,
+            visualDensity: VisualDensity.compact,
+            onPressed: _isSyncingFirebase ? null : _handleSyncToFirebase,
+          ),
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
             decoration: BoxDecoration(
@@ -434,32 +591,6 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
                     color: DompetKuColors.textPrimary,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
-            decoration: BoxDecoration(
-              color: DompetKuColors.card,
-              borderRadius: BorderRadius.circular(20),
-              border: Border.all(color: DompetKuColors.glassBorder),
-            ),
-            child: const Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.storage_rounded,
-                  size: 13,
-                  color: DompetKuColors.textMuted,
-                ),
-                SizedBox(width: 6),
-                Text(
-                  'Postgres :5433 • Adminer GUI :8081',
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: DompetKuColors.textMuted,
                   ),
                 ),
               ],
@@ -829,12 +960,14 @@ class _CredentialItem extends StatelessWidget {
               ),
             ),
           ),
-          SelectableText(
-            value,
-            style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w700,
-              color: DompetKuColors.textPrimary,
+          Expanded(
+            child: SelectableText(
+              value,
+              style: const TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: DompetKuColors.textPrimary,
+              ),
             ),
           ),
         ],

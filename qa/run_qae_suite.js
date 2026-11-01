@@ -7,6 +7,8 @@ const EVIDENCE_DIR = path.join(ROOT_DIR, 'evidence');
 const API_BASE = process.env.API_BASE_URL || 'http://localhost:4000/api';
 const WEB_BASE = process.env.WEB_BASE_URL || 'http://localhost:8080';
 const ADMINER_BASE = process.env.ADMINER_BASE_URL || 'http://localhost:8081';
+const FIREBASE_PROJECT_ID = 'dompetku-4a2e1';
+const FIREBASE_FIRESTORE_URL = `https://firestore.googleapis.com/v1/projects/${FIREBASE_PROJECT_ID}/databases/(default)/documents/transactions`;
 
 function getCommitSha() {
   return execSync('git rev-parse HEAD', { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
@@ -37,7 +39,7 @@ async function main() {
   const commitSha = getCommitSha();
   fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
 
-  console.log(`[QAE v2.0] Memulai eksekusi suite pada commit ${commitSha} (${runStartedAt})`);
+  console.log(`[QAE v2.5] Memulai eksekusi suite pada commit ${commitSha} (${runStartedAt})`);
 
   // -------------------------------------------------------------------------
   // EXP-001: 5-Container Health & Orchestration (Postgres + Redis + Adminer + Backend + Frontend)
@@ -319,6 +321,44 @@ async function main() {
   });
 
   // -------------------------------------------------------------------------
+  // EXP-010: Live Firebase Cloud Firestore (dompetku-4a2e1) Integration
+  // -------------------------------------------------------------------------
+  const fbDocId = 'tx_qae_live_10';
+  const fbUpsertRes = await reqJson(`${FIREBASE_FIRESTORE_URL}/${fbDocId}`, {
+    method: 'PATCH',
+    body: JSON.stringify({
+      fields: {
+        id: { integerValue: '10' },
+        title: { stringValue: 'Transaksi Cloud Firestore Live' },
+        amount: { doubleValue: 750000 },
+        type: { stringValue: 'income' },
+        category: { stringValue: 'Freelance' },
+        note: { stringValue: 'Verified live on dompetku-4a2e1' },
+        createdAt: { stringValue: new Date().toISOString() },
+      },
+    }),
+  });
+  const fbListRes = await reqJson(FIREBASE_FIRESTORE_URL);
+  const exp010Pass =
+    fbUpsertRes.status === 200 &&
+    Boolean(fbUpsertRes.body.name && fbUpsertRes.body.name.includes(FIREBASE_PROJECT_ID)) &&
+    fbListRes.status === 200 &&
+    Array.isArray(fbListRes.body.documents) &&
+    fbListRes.body.documents.length >= 1;
+
+  writeEvidence('EXP-010-firebase-cloud.json', {
+    id: 'EXP-010',
+    status: exp010Pass ? 'PASS' : 'FAIL',
+    commit_sha: commitSha,
+    exit_code: exp010Pass ? 0 : 1,
+    failures: exp010Pass ? 0 : 1,
+    firebase_project_id: FIREBASE_PROJECT_ID,
+    upsert_status: fbUpsertRes.status,
+    upserted_document_name: fbUpsertRes.body.name,
+    total_cloud_documents: fbListRes.body.documents ? fbListRes.body.documents.length : 0,
+  });
+
+  // -------------------------------------------------------------------------
   // EXP-007: Browser E2E via Selenium WebDriver
   // -------------------------------------------------------------------------
   execSync(`python qa/selenium_e2e.py "${WEB_BASE}" "${commitSha}" "${EVIDENCE_DIR}"`, {
@@ -343,16 +383,17 @@ async function main() {
     'EXP-007',
     'EXP-008',
     'EXP-009',
+    'EXP-010',
   ];
 
   const qaeSpec = {
-    feature: 'dompetku-flutter-docker-expense-v2',
+    feature: 'dompetku-flutter-docker-firebase-v2.5',
     expected_criteria: expectedCriteria,
   };
   fs.writeFileSync(path.join(ROOT_DIR, 'qae-spec.json'), JSON.stringify(qaeSpec, null, 2), 'utf8');
 
   const qaeInput = {
-    feature: 'dompetku-flutter-docker-expense-v2',
+    feature: 'dompetku-flutter-docker-firebase-v2.5',
     commit_sha: commitSha,
     run_started_at: runStartedAt,
     expected_criteria: expectedCriteria,
@@ -400,7 +441,7 @@ async function main() {
       },
       {
         id: 'EXP-006',
-        title: 'Backend unit tests and Flutter widget tests (including Charts & Edit) pass with 0 warnings/errors',
+        title: 'Backend unit tests and Flutter widget tests (including Charts, Edit & Firebase Switcher) pass with 0 warnings/errors',
         layer: 'unit',
         status: exp006Pass ? 'PASS' : 'FAIL',
         mandatory: true,
@@ -430,14 +471,22 @@ async function main() {
         mandatory: true,
         evidence: ['evidence/EXP-009-redis-adminer.json'],
       },
+      {
+        id: 'EXP-010',
+        title: 'Live Firebase Cloud Firestore (dompetku-4a2e1) serverless database CRUD verified',
+        layer: 'integration',
+        status: exp010Pass ? 'PASS' : 'FAIL',
+        mandatory: true,
+        evidence: ['evidence/EXP-010-firebase-cloud.json'],
+      },
     ],
     test_execution: {
       integration: {
         command_executed: true,
-        exit_code: exp001Pass && exp009Pass ? 0 : 1,
-        status: exp001Pass && exp009Pass ? 'PASS' : 'FAIL',
-        tests_executed: 3,
-        failures: exp001Pass && exp009Pass ? 0 : 1,
+        exit_code: exp001Pass && exp009Pass && exp010Pass ? 0 : 1,
+        status: exp001Pass && exp009Pass && exp010Pass ? 'PASS' : 'FAIL',
+        tests_executed: 4,
+        failures: exp001Pass && exp009Pass && exp010Pass ? 0 : 1,
       },
       api: {
         command_executed: true,
@@ -464,7 +513,7 @@ async function main() {
         command_executed: true,
         exit_code: exp006Pass ? 0 : 1,
         status: exp006Pass ? 'PASS' : 'FAIL',
-        tests_executed: 5,
+        tests_executed: 6,
         failures: exp006Pass ? 0 : 1,
       },
       e2e: {
@@ -476,15 +525,15 @@ async function main() {
       },
     },
     residual_risks: [
-      'Aplikasi berjalan pada environment Docker lokal tanpa TLS/HTTPS (hanya untuk pembelajaran lokal di localhost).',
+      'Aplikasi berjalan pada environment Docker lokal tanpa TLS/HTTPS untuk stack lokal, dan menggunakan Firestore rules terbuka untuk pembelajaran pada project dompetku-4a2e1.',
     ],
   };
 
   fs.writeFileSync(path.join(ROOT_DIR, 'qae-input.json'), JSON.stringify(qaeInput, null, 2), 'utf8');
-  console.log('[QAE v2.0] Seluruh evidence berhasil dikumpulkan ke folder evidence/ dan qae-input.json');
+  console.log('[QAE v2.5] Seluruh evidence berhasil dikumpulkan ke folder evidence/ dan qae-input.json');
 }
 
 main().catch((err) => {
-  console.error('[QAE v2.0] Error:', err);
+  console.error('[QAE v2.5] Error:', err);
   process.exit(1);
 });
