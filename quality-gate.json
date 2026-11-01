@@ -1,8 +1,8 @@
 {
-  "feature": "dompetku-flutter-docker-expense-v2",
+  "feature": "dompetku-flutter-docker-firebase-v2.5",
   "decision": "ACCEPTED",
-  "timestamp": "2026-11-01T07:38:15.972Z",
-  "commit_sha": "f7a66b3df755ce7639b0de761f3700ab9590725e",
+  "timestamp": "2026-11-01T09:16:23.207Z",
+  "commit_sha": "d2abce76173f2f2f060b7de56f2071fd33341863",
   "environment": {
     "node_version": "v25.2.1",
     "platform": "win32"
@@ -21,8 +21,8 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-001-health.json",
-          "size_bytes": 9662,
-          "last_modified": "2026-11-01T07:37:51.675Z"
+          "size_bytes": 9589,
+          "last_modified": "2026-11-01T09:15:45.469Z"
         }
       ],
       "notes": ""
@@ -40,8 +40,8 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-002-crud-summary.json",
-          "size_bytes": 2450,
-          "last_modified": "2026-11-01T07:37:51.721Z"
+          "size_bytes": 2451,
+          "last_modified": "2026-11-01T09:15:45.547Z"
         }
       ],
       "notes": ""
@@ -60,7 +60,7 @@
         {
           "file": "evidence/EXP-003-negative-validation.json",
           "size_bytes": 679,
-          "last_modified": "2026-11-01T07:37:51.744Z"
+          "last_modified": "2026-11-01T09:15:45.570Z"
         }
       ],
       "notes": ""
@@ -79,7 +79,7 @@
         {
           "file": "evidence/EXP-004-db-persistence.json",
           "size_bytes": 248,
-          "last_modified": "2026-11-01T07:37:56.505Z"
+          "last_modified": "2026-11-01T09:15:50.419Z"
         }
       ],
       "notes": ""
@@ -98,14 +98,14 @@
         {
           "file": "evidence/EXP-005-security.json",
           "size_bytes": 404,
-          "last_modified": "2026-11-01T07:37:56.543Z"
+          "last_modified": "2026-11-01T09:15:50.464Z"
         }
       ],
       "notes": ""
     },
     {
       "id": "EXP-006",
-      "title": "Backend unit tests and Flutter widget tests (including Charts & Edit) pass with 0 warnings/errors",
+      "title": "Backend unit tests and Flutter widget tests (including Charts, Edit & Firebase Switcher) pass with 0 warnings/errors",
       "layer": "unit",
       "status": "PASS",
       "mandatory": true,
@@ -116,8 +116,8 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-006-unit-widget.json",
-          "size_bytes": 1036,
-          "last_modified": "2026-11-01T07:38:09.372Z"
+          "size_bytes": 1035,
+          "last_modified": "2026-11-01T09:16:04.221Z"
         }
       ],
       "notes": ""
@@ -136,13 +136,13 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-007-selenium-e2e.json",
-          "size_bytes": 1397,
-          "last_modified": "2026-11-01T07:38:15.774Z"
+          "size_bytes": 1396,
+          "last_modified": "2026-11-01T09:16:13.912Z"
         },
         {
           "file": "evidence/EXP-007-selenium-ui.png",
-          "size_bytes": 162481,
-          "last_modified": "2026-11-01T07:38:13.643Z"
+          "size_bytes": 168697,
+          "last_modified": "2026-11-01T09:16:11.758Z"
         }
       ],
       "notes": ""
@@ -161,7 +161,7 @@
         {
           "file": "evidence/EXP-008-edit-transaction.json",
           "size_bytes": 416,
-          "last_modified": "2026-11-01T07:38:09.398Z"
+          "last_modified": "2026-11-01T09:16:04.251Z"
         }
       ],
       "notes": ""
@@ -180,7 +180,26 @@
         {
           "file": "evidence/EXP-009-redis-adminer.json",
           "size_bytes": 461,
-          "last_modified": "2026-11-01T07:38:09.431Z"
+          "last_modified": "2026-11-01T09:16:04.342Z"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "EXP-010",
+      "title": "Live Firebase Cloud Firestore (dompetku-4a2e1) serverless database CRUD verified",
+      "layer": "integration",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-010-firebase-cloud.json"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-010-firebase-cloud.json",
+          "size_bytes": 346,
+          "last_modified": "2026-11-01T09:16:04.667Z"
         }
       ],
       "notes": ""
@@ -191,7 +210,7 @@
       "command_executed": true,
       "exit_code": 0,
       "status": "PASS",
-      "tests_executed": 3,
+      "tests_executed": 4,
       "failures": 0
     },
     "api": {
@@ -219,7 +238,7 @@
       "command_executed": true,
       "exit_code": 0,
       "status": "PASS",
-      "tests_executed": 5,
+      "tests_executed": 6,
       "failures": 0
     },
     "e2e": {
@@ -232,11 +251,11 @@
   },
   "blockers": [],
   "residual_risks": [
-    "Aplikasi berjalan pada environment Docker lokal tanpa TLS/HTTPS (hanya untuk pembelajaran lokal di localhost)."
+    "Aplikasi berjalan pada environment Docker lokal tanpa TLS/HTTPS untuk stack lokal, dan menggunakan Firestore rules terbuka untuk pembelajaran pada project dompetku-4a2e1."
   ],
   "summary": {
-    "total_criteria": 9,
-    "passed": 9,
+    "total_criteria": 10,
+    "passed": 10,
     "failed": 0,
     "incomplete": 0,
     "blocked": 0,

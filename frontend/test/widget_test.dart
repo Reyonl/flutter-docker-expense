@@ -5,28 +5,36 @@ import 'package:dompetku_app/models/transaction_model.dart';
 import 'package:dompetku_app/services/api_service.dart';
 
 class FakeExpenseApiClient implements ExpenseApiClient {
-  String _cacheStatus = 'HIT';
+  String _cacheStatus;
+  final String containerId;
+  final List<ExpenseTransaction> _items;
 
-  final List<ExpenseTransaction> _items = [
-    const ExpenseTransaction(
-      id: 1,
-      title: 'Gaji Bulanan',
-      amount: 8500000,
-      type: 'income',
-      category: 'Gaji',
-      note: 'Pemasukan utama',
-      createdAt: '2026-11-01T08:00:00Z',
-    ),
-    const ExpenseTransaction(
-      id: 2,
-      title: 'Kopi & Sarapan',
-      amount: 50000,
-      type: 'expense',
-      category: 'Makanan',
-      note: 'Ngopi pagi',
-      createdAt: '2026-11-01T09:00:00Z',
-    ),
-  ];
+  FakeExpenseApiClient({
+    String cacheStatus = 'HIT',
+    this.containerId = 'docker-test-container-01',
+    List<ExpenseTransaction>? initialItems,
+  })  : _cacheStatus = cacheStatus,
+        _items = initialItems ??
+            [
+              const ExpenseTransaction(
+                id: 1,
+                title: 'Gaji Bulanan',
+                amount: 8500000,
+                type: 'income',
+                category: 'Gaji',
+                note: 'Pemasukan utama',
+                createdAt: '2026-11-01T08:00:00Z',
+              ),
+              const ExpenseTransaction(
+                id: 2,
+                title: 'Kopi & Sarapan',
+                amount: 50000,
+                type: 'expense',
+                category: 'Makanan',
+                note: 'Ngopi pagi',
+                createdAt: '2026-11-01T09:00:00Z',
+              ),
+            ];
 
   @override
   Future<FinancialSummary> fetchSummary() async {
@@ -58,7 +66,7 @@ class FakeExpenseApiClient implements ExpenseApiClient {
           count: 1,
         ),
       ],
-      containerId: 'docker-test-container-01',
+      containerId: containerId,
       cacheStatus: _cacheStatus,
       redisConnected: true,
     );
@@ -206,5 +214,45 @@ void main() {
 
     expect(find.text('Kopi Spesial'), findsOneWidget);
     expect(find.text('Rp 8.250.000'), findsOneWidget);
+  });
+
+  testWidgets(
+      'Engine Switcher toggles between Docker Stack and Firebase Cloud (dompetku-4a2e1)',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 960));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fakeDocker = FakeExpenseApiClient();
+    final fakeFirebase = FakeExpenseApiClient(
+      cacheStatus: 'CLOUD',
+      containerId: 'firebase:dompetku-4a2e1',
+      initialItems: const [
+        ExpenseTransaction(
+          id: 99,
+          title: 'Saldo Cloud Firestore',
+          amount: 12000000,
+          type: 'income',
+          category: 'Gaji',
+          note: 'Serverless Cloud DB',
+          createdAt: '2026-11-01T11:00:00Z',
+        ),
+      ],
+    );
+
+    await tester.pumpWidget(
+      DompetKuApp(apiClient: fakeDocker, firebaseClient: fakeFirebase),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Container: docker-test-container-01'), findsOneWidget);
+
+    // Switch to Firebase Cloud engine
+    await tester.tap(find.byKey(const Key('engine-firebase-chip')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Container: firebase:dompetku-4a2e1'), findsOneWidget);
+    expect(find.text('Redis: CLOUD'), findsOneWidget);
+    expect(find.text('Saldo Cloud Firestore'), findsOneWidget);
+    expect(find.text('Rp 12.000.000'), findsWidgets);
   });
 }

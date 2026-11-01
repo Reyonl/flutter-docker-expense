@@ -1,7 +1,7 @@
 {
-  "feature": "dompetku-flutter-docker-expense-v2",
-  "commit_sha": "f7a66b3df755ce7639b0de761f3700ab9590725e",
-  "run_started_at": "2026-11-01T07:37:51.306Z",
+  "feature": "dompetku-flutter-docker-firebase-v2.5",
+  "commit_sha": "d2abce76173f2f2f060b7de56f2071fd33341863",
+  "run_started_at": "2026-11-01T09:15:44.959Z",
   "expected_criteria": [
     "EXP-001",
     "EXP-002",
@@ -11,7 +11,8 @@
     "EXP-006",
     "EXP-007",
     "EXP-008",
-    "EXP-009"
+    "EXP-009",
+    "EXP-010"
   ],
   "required_layers": [
     "integration",
@@ -74,7 +75,7 @@
     },
     {
       "id": "EXP-006",
-      "title": "Backend unit tests and Flutter widget tests (including Charts & Edit) pass with 0 warnings/errors",
+      "title": "Backend unit tests and Flutter widget tests (including Charts, Edit & Firebase Switcher) pass with 0 warnings/errors",
       "layer": "unit",
       "status": "PASS",
       "mandatory": true,
@@ -112,6 +113,16 @@
       "evidence": [
         "evidence/EXP-009-redis-adminer.json"
       ]
+    },
+    {
+      "id": "EXP-010",
+      "title": "Live Firebase Cloud Firestore (dompetku-4a2e1) serverless database CRUD verified",
+      "layer": "integration",
+      "status": "PASS",
+      "mandatory": true,
+      "evidence": [
+        "evidence/EXP-010-firebase-cloud.json"
+      ]
     }
   ],
   "test_execution": {
@@ -119,7 +130,7 @@
       "command_executed": true,
       "exit_code": 0,
       "status": "PASS",
-      "tests_executed": 3,
+      "tests_executed": 4,
       "failures": 0
     },
     "api": {
@@ -147,7 +158,7 @@
       "command_executed": true,
       "exit_code": 0,
       "status": "PASS",
-      "tests_executed": 5,
+      "tests_executed": 6,
       "failures": 0
     },
     "e2e": {
@@ -159,6 +170,6 @@
     }
   },
   "residual_risks": [
-    "Aplikasi berjalan pada environment Docker lokal tanpa TLS/HTTPS (hanya untuk pembelajaran lokal di localhost)."
+    "Aplikasi berjalan pada environment Docker lokal tanpa TLS/HTTPS untuk stack lokal, dan menggunakan Firestore rules terbuka untuk pembelajaran pada project dompetku-4a2e1."
   ]
 }

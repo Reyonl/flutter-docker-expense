@@ -1,5 +1,5 @@
 {
-  "feature": "dompetku-flutter-docker-expense-v2",
+  "feature": "dompetku-flutter-docker-firebase-v2.5",
   "expected_criteria": [
     "EXP-001",
     "EXP-002",
@@ -9,6 +9,7 @@
     "EXP-006",
     "EXP-007",
     "EXP-008",
-    "EXP-009"
+    "EXP-009",
+    "EXP-010"
   ]
 }

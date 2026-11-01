@@ -1,0 +1,17 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /transactions/{txId} {
+      allow read, delete: if true;
+      allow create, update: if request.resource.data.title is string
+        && request.resource.data.title.size() > 0
+        && request.resource.data.title.size() <= 150
+        && (request.resource.data.amount is int || request.resource.data.amount is float)
+        && request.resource.data.amount > 0
+        && (request.resource.data.type == 'income' || request.resource.data.type == 'expense')
+        && request.resource.data.category is string
+        && request.resource.data.category.size() > 0;
+    }
+  }
+}
