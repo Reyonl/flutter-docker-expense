@@ -1,0 +1,34 @@
+{
+  "id": "EXP-003",
+  "status": "PASS",
+  "commit_sha": "e9c2c48c89b64a09432130109098b0449efe3b7e",
+  "exit_code": 0,
+  "failures": 0,
+  "negative_amount_response": {
+    "status": 400,
+    "body": {
+      "error": "Nominal (amount) harus berupa angka lebih dari 0",
+      "errors": [
+        "Nominal (amount) harus berupa angka lebih dari 0"
+      ]
+    }
+  },
+  "empty_title_response": {
+    "status": 400,
+    "body": {
+      "error": "Judul transaksi (title) wajib diisi",
+      "errors": [
+        "Judul transaksi (title) wajib diisi"
+      ]
+    }
+  },
+  "invalid_type_response": {
+    "status": 400,
+    "body": {
+      "error": "Tipe transaksi (type) harus 'income' atau 'expense'",
+      "errors": [
+        "Tipe transaksi (type) harus 'income' atau 'expense'"
+      ]
+    }
+  }
+}
