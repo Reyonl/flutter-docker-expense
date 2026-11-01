@@ -17,6 +17,7 @@ async function reqJson(url, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      Connection: 'close',
       ...(options.headers || {}),
     },
   });
