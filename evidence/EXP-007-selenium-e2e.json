@@ -1,0 +1,24 @@
+{
+  "status": "PASS",
+  "commit_sha": "e9c2c48c89b64a09432130109098b0449efe3b7e",
+  "exit_code": 0,
+  "failures": 0,
+  "scenario": "EXP-007: Flutter Web Docker Container UI + Nginx Reverse Proxy E2E",
+  "steps": [
+    "Step 1: Open Dockerized Flutter Web app at http://localhost:8080",
+    "Step 2: Explicit wait for document title and Flutter root element (flutter-view / flt-glass-pane)",
+    "Step 3: Verify Nginx reverse-proxy /api/summary and /api/transactions from browser context",
+    "Step 4: Reload Flutter Web UI and wait for rendered canvas surface",
+    "Step 5: Capture screenshot evidence to evidence/EXP-007-selenium-ui.png"
+  ],
+  "expected_result": "Flutter Web loads at http://localhost:8080, communicates with backend container via /api/* proxy, updates balance, and renders with 0 console/network errors.",
+  "actual_result": "Flutter root <body> rendered; containerId=7d220a52c817; initialBalance=11025000 -> updatedBalance=10900000",
+  "evidence": {
+    "screenshot": "evidence/EXP-007-selenium-ui.png",
+    "console_errors": [],
+    "network_errors": [],
+    "dom_state": "Root element <body> active, title='DompetKu Docker \u2014 Money Expense Tracker'"
+  },
+  "root_cause": "N/A",
+  "recommendation": "All E2E checks passed"
+}

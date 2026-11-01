@@ -1,0 +1,109 @@
+{
+  "id": "EXP-002",
+  "status": "PASS",
+  "commit_sha": "e9c2c48c89b64a09432130109098b0449efe3b7e",
+  "exit_code": 0,
+  "failures": 0,
+  "created_income": {
+    "item": {
+      "id": 8,
+      "title": "Bonus Project Docker",
+      "amount": 2000000,
+      "type": "income",
+      "category": "Bonus",
+      "note": "QAE EXP-002 positive income test",
+      "createdAt": "2026-11-01T06:55:22.541Z"
+    },
+    "containerId": "7d220a52c817"
+  },
+  "created_expense": {
+    "item": {
+      "id": 9,
+      "title": "Langganan Server Cloud",
+      "amount": 250000,
+      "type": "expense",
+      "category": "Tagihan",
+      "note": "QAE EXP-002 positive expense test",
+      "createdAt": "2026-11-01T06:55:22.549Z"
+    },
+    "containerId": "7d220a52c817"
+  },
+  "summary_before": {
+    "totalIncome": 10500000,
+    "totalExpense": 1200000,
+    "balance": 9300000,
+    "transactionCount": 7,
+    "byCategory": [
+      {
+        "category": "Gaji",
+        "type": "income",
+        "total": 8500000,
+        "count": 1
+      },
+      {
+        "category": "Bonus",
+        "type": "income",
+        "total": 2000000,
+        "count": 1
+      },
+      {
+        "category": "Tagihan",
+        "type": "expense",
+        "total": 700000,
+        "count": 2
+      },
+      {
+        "category": "Makanan",
+        "type": "expense",
+        "total": 375000,
+        "count": 2
+      },
+      {
+        "category": "Edukasi",
+        "type": "expense",
+        "total": 125000,
+        "count": 1
+      }
+    ],
+    "containerId": "7d220a52c817"
+  },
+  "summary_after": {
+    "totalIncome": 12500000,
+    "totalExpense": 1450000,
+    "balance": 11050000,
+    "transactionCount": 9,
+    "byCategory": [
+      {
+        "category": "Gaji",
+        "type": "income",
+        "total": 8500000,
+        "count": 1
+      },
+      {
+        "category": "Bonus",
+        "type": "income",
+        "total": 4000000,
+        "count": 2
+      },
+      {
+        "category": "Tagihan",
+        "type": "expense",
+        "total": 950000,
+        "count": 3
+      },
+      {
+        "category": "Makanan",
+        "type": "expense",
+        "total": 375000,
+        "count": 2
+      },
+      {
+        "category": "Edukasi",
+        "type": "expense",
+        "total": 125000,
+        "count": 1
+      }
+    ],
+    "containerId": "7d220a52c817"
+  }
+}

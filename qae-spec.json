@@ -1,0 +1,12 @@
+{
+  "feature": "dompetku-flutter-docker-expense",
+  "expected_criteria": [
+    "EXP-001",
+    "EXP-002",
+    "EXP-003",
+    "EXP-004",
+    "EXP-005",
+    "EXP-006",
+    "EXP-007"
+  ]
+}

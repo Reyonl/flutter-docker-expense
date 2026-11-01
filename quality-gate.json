@@ -1,0 +1,207 @@
+{
+  "feature": "dompetku-flutter-docker-expense",
+  "decision": "ACCEPTED",
+  "timestamp": "2026-11-01T06:55:47.933Z",
+  "commit_sha": "e9c2c48c89b64a09432130109098b0449efe3b7e",
+  "environment": {
+    "node_version": "v25.2.1",
+    "platform": "win32"
+  },
+  "criteria": [
+    {
+      "id": "EXP-001",
+      "title": "Docker containers healthy & GET /api/health returns 200 OK with containerId",
+      "layer": "integration",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-001-health.json"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-001-health.json",
+          "size_bytes": 5963,
+          "last_modified": "2026-11-01T06:55:22.526Z"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "EXP-002",
+      "title": "Positive CRUD transactions & financial summary calculation",
+      "layer": "api",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-002-crud-summary.json"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-002-crud-summary.json",
+          "size_bytes": 2330,
+          "last_modified": "2026-11-01T06:55:22.558Z"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "EXP-003",
+      "title": "Negative input validation rejects invalid amounts, empty title, and invalid type with HTTP 400",
+      "layer": "api",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-003-negative-validation.json"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-003-negative-validation.json",
+          "size_bytes": 793,
+          "last_modified": "2026-11-01T06:55:22.571Z"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "EXP-004",
+      "title": "PostgreSQL database persistence & Docker volume survives container restart",
+      "layer": "database",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-004-db-persistence.json"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-004-db-persistence.json",
+          "size_bytes": 246,
+          "last_modified": "2026-11-01T06:55:27.491Z"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "EXP-005",
+      "title": "OWASP XSS tag sanitization and SQL Injection resilience",
+      "layer": "security",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-005-security.json"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-005-security.json",
+          "size_bytes": 404,
+          "last_modified": "2026-11-01T06:55:27.545Z"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "EXP-006",
+      "title": "Backend unit tests and Flutter widget tests pass with 0 warnings/errors",
+      "layer": "unit",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-006-unit-widget.json"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-006-unit-widget.json",
+          "size_bytes": 1034,
+          "last_modified": "2026-11-01T06:55:41.482Z"
+        }
+      ],
+      "notes": ""
+    },
+    {
+      "id": "EXP-007",
+      "title": "Selenium WebDriver E2E test on Flutter Web container (http://localhost:8080) with screenshot",
+      "layer": "e2e",
+      "status": "PASS",
+      "mandatory": true,
+      "flaky": false,
+      "evidence": [
+        "evidence/EXP-007-selenium-e2e.json",
+        "evidence/EXP-007-selenium-ui.png"
+      ],
+      "verified_evidence": [
+        {
+          "file": "evidence/EXP-007-selenium-e2e.json",
+          "size_bytes": 1275,
+          "last_modified": "2026-11-01T06:55:47.650Z"
+        },
+        {
+          "file": "evidence/EXP-007-selenium-ui.png",
+          "size_bytes": 128509,
+          "last_modified": "2026-11-01T06:55:45.494Z"
+        }
+      ],
+      "notes": ""
+    }
+  ],
+  "test_execution": {
+    "integration": {
+      "command_executed": true,
+      "exit_code": 0,
+      "status": "PASS",
+      "tests_executed": 1,
+      "failures": 0
+    },
+    "api": {
+      "command_executed": true,
+      "exit_code": 0,
+      "status": "PASS",
+      "tests_executed": 5,
+      "failures": 0
+    },
+    "database": {
+      "command_executed": true,
+      "exit_code": 0,
+      "status": "PASS",
+      "tests_executed": 2,
+      "failures": 0
+    },
+    "security": {
+      "command_executed": true,
+      "exit_code": 0,
+      "status": "PASS",
+      "tests_executed": 2,
+      "failures": 0
+    },
+    "unit": {
+      "command_executed": true,
+      "exit_code": 0,
+      "status": "PASS",
+      "tests_executed": 5,
+      "failures": 0
+    },
+    "e2e": {
+      "command_executed": true,
+      "exit_code": 0,
+      "status": "PASS",
+      "tests_executed": 1,
+      "failures": 0
+    }
+  },
+  "blockers": [],
+  "residual_risks": [
+    "Aplikasi berjalan pada environment Docker lokal tanpa TLS/HTTPS (hanya untuk pembelajaran lokal di localhost)."
+  ],
+  "summary": {
+    "total_criteria": 7,
+    "passed": 7,
+    "failed": 0,
+    "incomplete": 0,
+    "blocked": 0,
+    "flaky": 0
+  }
+}
