@@ -1,0 +1,88 @@
+# ============================================================================
+# DOCKER COMPOSE — DompetKu Money Expense Tracker (3 Container Stack)
+# ============================================================================
+# File ini mengatur 3 container sekaligus hanya dengan 1 perintah:
+#   docker compose up -d --build
+# ============================================================================
+
+services:
+  # --------------------------------------------------------------------------
+  # CONTAINER 1: Database PostgreSQL (expense-db)
+  # --------------------------------------------------------------------------
+  db:
+    image: postgres:16-alpine
+    container_name: expense-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: dompetku
+      POSTGRES_PASSWORD: dompetku_secret
+      POSTGRES_DB: dompetku_db
+    ports:
+      # Port laptop 5433 -> Port container 5432 (agar tidak bentrok jika ada Postgres lokal)
+      - "5433:5432"
+    volumes:
+      # Named Volume: Data database tetap aman walau container dihapus/restart
+      - pgdata:/var/lib/postgresql/data
+      # Bind Mount: Otomatis jalankan init.sql saat database pertama kali dibuat
+      - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U dompetku -d dompetku_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+    networks:
+      - expense-net
+
+  # --------------------------------------------------------------------------
+  # CONTAINER 2: Backend REST API Node.js + Express (expense-backend)
+  # --------------------------------------------------------------------------
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: expense-backend
+    restart: unless-stopped
+    environment:
+      PORT: 4000
+      # Perhatikan DB_HOST berisi "db" (nama service container di atas!), bukan localhost
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_USER: dompetku
+      DB_PASSWORD: dompetku_secret
+      DB_NAME: dompetku_db
+    ports:
+      # Port laptop 4000 -> Port container 4000
+      - "4000:4000"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - expense-net
+
+  # --------------------------------------------------------------------------
+  # CONTAINER 3: Frontend Flutter Web + Nginx (expense-frontend)
+  # --------------------------------------------------------------------------
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: expense-frontend
+    restart: unless-stopped
+    ports:
+      # Port laptop 8080 -> Port container 80 (buka di http://localhost:8080)
+      - "8080:80"
+    depends_on:
+      - backend
+    networks:
+      - expense-net
+
+# ============================================================================
+# DOCKER VOLUME & NETWORK
+# ============================================================================
+volumes:
+  pgdata:
+    driver: local
+
+networks:
+  expense-net:
+    driver: bridge
