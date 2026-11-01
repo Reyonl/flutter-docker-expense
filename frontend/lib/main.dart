@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'models/transaction_model.dart';
 import 'services/api_service.dart';
+import 'widgets/charts_panel.dart';
 
 void main() {
   runApp(DompetKuApp(apiClient: HttpExpenseApiClient()));
@@ -14,6 +15,7 @@ class DompetKuColors {
   static const Color secondary = Color(0xFF3B82F6);
   static const Color incomeGreen = Color(0xFF059669);
   static const Color expenseRed = Color(0xFFDC2626);
+  static const Color warningAmber = Color(0xFFF59E0B);
   static const Color textPrimary = Color(0xFFFFFFFF);
   static const Color textMuted = Color(0xFF94A3B8);
   static const Color glassBorder = Color(0x1F94A3B8);
@@ -27,7 +29,7 @@ class DompetKuApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'DompetKu Docker — Money Expense Tracker',
+      title: 'DompetKu Docker Pro — Fintech Expense & 5-Container Lab',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         brightness: Brightness.dark,
@@ -123,6 +125,30 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     }
   }
 
+  Future<void> _handleFlushRedis() async {
+    try {
+      await widget.apiClient.flushRedisCache();
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Redis Cache di-flush! Memuat ulang dari PostgreSQL (status akan menjadi MISS)...',
+          ),
+          backgroundColor: DompetKuColors.card,
+        ),
+      );
+      await _loadData();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Gagal flush Redis: $e'),
+          backgroundColor: DompetKuColors.expenseRed,
+        ),
+      );
+    }
+  }
+
   Future<void> _handleDelete(ExpenseTransaction tx) async {
     try {
       await widget.apiClient.deleteTransaction(tx.id);
@@ -145,18 +171,66 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     }
   }
 
-  Future<void> _openAddTransactionDialog() async {
-    final created = await showDialog<bool>(
+  Future<void> _openTransactionDialog({ExpenseTransaction? existing}) async {
+    final saved = await showDialog<bool>(
       context: context,
-      builder: (ctx) => AddTransactionDialog(
+      builder: (ctx) => TransactionFormDialog(
         apiClient: widget.apiClient,
         expenseCategories: _expenseCategories,
         incomeCategories: _incomeCategories,
+        existingTransaction: existing,
       ),
     );
-    if (created == true) {
+    if (saved == true) {
       await _loadData();
     }
+  }
+
+  void _showAdminerGuideDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: DompetKuColors.card,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+          side: const BorderSide(color: DompetKuColors.glassBorder),
+        ),
+        title: const Row(
+          children: [
+            Icon(Icons.storage_rounded, color: DompetKuColors.secondary),
+            SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Panduan Login Adminer DB GUI (:8081)',
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+              ),
+            ),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Buka http://localhost:8081 di tab browser baru, lalu isi form login dengan kredensial container PostgreSQL berikut:',
+              style: TextStyle(fontSize: 13, color: DompetKuColors.textMuted),
+            ),
+            SizedBox(height: 14),
+            _CredentialItem(label: 'System', value: 'PostgreSQL'),
+            _CredentialItem(label: 'Server', value: 'db'),
+            _CredentialItem(label: 'Username', value: 'dompetku'),
+            _CredentialItem(label: 'Password', value: 'dompetku_secret'),
+            _CredentialItem(label: 'Database', value: 'dompetku_db'),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.of(ctx).pop(),
+            child: const Text('Mengerti'),
+          ),
+        ],
+      ),
+    );
   }
 
   IconData _iconForCategory(String category, bool isIncome) {
@@ -189,12 +263,13 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
   @override
   Widget build(BuildContext context) {
     final summary = _summary;
+    final isHit = summary?.cacheStatus == 'HIT';
 
     return Scaffold(
       appBar: AppBar(
         backgroundColor: DompetKuColors.card,
         elevation: 0,
-        titleSpacing: 20,
+        titleSpacing: 16,
         title: Row(
           children: [
             Container(
@@ -202,7 +277,9 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
               decoration: BoxDecoration(
                 color: DompetKuColors.primary.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(10),
-                border: Border.all(color: DompetKuColors.secondary.withValues(alpha: 0.4)),
+                border: Border.all(
+                  color: DompetKuColors.secondary.withValues(alpha: 0.4),
+                ),
               ),
               child: const Icon(
                 Icons.account_balance_wallet_outlined,
@@ -225,7 +302,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                     ),
                   ),
                   Text(
-                    'Flutter + Node.js API + PostgreSQL Container',
+                    '5-Container Stack: Flutter • Node.js • Postgres • Redis • Adminer',
                     overflow: TextOverflow.ellipsis,
                     style: TextStyle(
                       fontSize: 11,
@@ -238,52 +315,30 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           ],
         ),
         actions: [
-          if (summary != null)
-            Padding(
-              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 6),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: DompetKuColors.incomeGreen.withValues(alpha: 0.16),
-                  borderRadius: BorderRadius.circular(20),
-                  border: Border.all(
-                    color: DompetKuColors.incomeGreen.withValues(alpha: 0.45),
-                  ),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const Icon(
-                      Icons.dns_outlined,
-                      size: 14,
-                      color: DompetKuColors.incomeGreen,
-                    ),
-                    const SizedBox(width: 6),
-                    Text(
-                      'Container: ${summary.containerId}',
-                      key: const Key('docker-container-badge'),
-                      style: const TextStyle(
-                        fontSize: 11,
-                        fontWeight: FontWeight.w600,
-                        color: DompetKuColors.textPrimary,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-            ),
+          IconButton(
+            key: const Key('adminer-info-button'),
+            tooltip: 'Info Login Database GUI (Adminer :8081)',
+            onPressed: _showAdminerGuideDialog,
+            icon: const Icon(Icons.storage_rounded, size: 20),
+          ),
+          IconButton(
+            key: const Key('flush-redis-button'),
+            tooltip: 'Flush Redis Cache (Uji MISS vs HIT)',
+            onPressed: _handleFlushRedis,
+            icon: const Icon(Icons.cleaning_services_outlined, size: 20),
+          ),
           IconButton(
             key: const Key('refresh-button'),
-            tooltip: 'Muat Ulang Data',
+            tooltip: 'Muat Ulang Data (Uji Redis HIT)',
             onPressed: _loadData,
             icon: const Icon(Icons.refresh_rounded),
           ),
-          const SizedBox(width: 8),
+          const SizedBox(width: 6),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
         key: const Key('open-add-transaction-button'),
-        onPressed: _openAddTransactionDialog,
+        onPressed: () => _openTransactionDialog(),
         backgroundColor: DompetKuColors.secondary,
         foregroundColor: DompetKuColors.textPrimary,
         icon: const Icon(Icons.add_rounded),
@@ -297,25 +352,120 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           onRefresh: _loadData,
           child: Center(
             child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 960),
+              constraints: const BoxConstraints(maxWidth: 1020),
               child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 12, 16, 88),
+                padding: const EdgeInsets.fromLTRB(16, 10, 16, 88),
                 children: [
+                  if (summary != null) _buildDockerTelemetryStrip(summary, isHit),
                   if (_errorMessage != null) _buildErrorBanner(_errorMessage!),
                   _buildSummaryCards(summary),
-                  const SizedBox(height: 12),
-                  _buildFilterAndSearchBar(),
-                  const SizedBox(height: 12),
-                  _buildTransactionsSection(),
-                  if (summary != null && summary.byCategory.isNotEmpty) ...[
-                    const SizedBox(height: 16),
-                    _buildCategoryBreakdown(summary),
+                  const SizedBox(height: 10),
+                  if (summary != null) ...[
+                    FintechChartsPanel(summary: summary),
+                    const SizedBox(height: 10),
                   ],
+                  _buildFilterAndSearchBar(),
+                  const SizedBox(height: 10),
+                  _buildTransactionsSection(),
                 ],
               ),
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildDockerTelemetryStrip(FinancialSummary summary, bool isHit) {
+    final badgeColor =
+        isHit ? DompetKuColors.incomeGreen : DompetKuColors.warningAmber;
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        children: [
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: DompetKuColors.secondary.withValues(alpha: 0.14),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: DompetKuColors.secondary.withValues(alpha: 0.4),
+              ),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Icon(
+                  Icons.dns_outlined,
+                  size: 13,
+                  color: DompetKuColors.secondary,
+                ),
+                const SizedBox(width: 6),
+                Text(
+                  'Container: ${summary.containerId}',
+                  key: const Key('docker-container-badge'),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w600,
+                    color: DompetKuColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: badgeColor.withValues(alpha: 0.16),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
+            ),
+            child: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(Icons.bolt_rounded, size: 14, color: badgeColor),
+                const SizedBox(width: 4),
+                Text(
+                  'Redis: ${summary.cacheStatus}',
+                  key: const Key('redis-cache-badge'),
+                  style: const TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                    color: DompetKuColors.textPrimary,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+            decoration: BoxDecoration(
+              color: DompetKuColors.card,
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(color: DompetKuColors.glassBorder),
+            ),
+            child: const Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.storage_rounded,
+                  size: 13,
+                  color: DompetKuColors.textMuted,
+                ),
+                SizedBox(width: 6),
+                Text(
+                  'Postgres :5433 • Adminer GUI :8081',
+                  style: TextStyle(
+                    fontSize: 11,
+                    color: DompetKuColors.textMuted,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -352,6 +502,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     final balance = summary?.balance ?? 0;
     final income = summary?.totalIncome ?? 0;
     final expense = summary?.totalExpense ?? 0;
+    final savingsRate = summary?.savingsRatePercent ?? 0;
 
     return LayoutBuilder(
       builder: (context, constraints) {
@@ -361,7 +512,8 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             cardKey: const Key('summary-balance-card'),
             title: 'Total Saldo Bersih',
             value: formatRupiah(balance),
-            subtitle: '${summary?.transactionCount ?? 0} total transaksi tercatat',
+            subtitle:
+                '${summary?.transactionCount ?? 0} transaksi • Rasio Tabungan ${savingsRate.toStringAsFixed(0)}%',
             icon: Icons.account_balance_wallet_outlined,
             accentColor: DompetKuColors.secondary,
             isPrimary: true,
@@ -370,7 +522,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             cardKey: const Key('summary-income-card'),
             title: 'Total Pemasukan',
             value: formatRupiah(income),
-            subtitle: 'Dana masuk (Income)',
+            subtitle: '${summary?.incomeCategories.length ?? 0} kategori pemasukan',
             icon: Icons.trending_up_rounded,
             accentColor: DompetKuColors.incomeGreen,
           ),
@@ -378,7 +530,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             cardKey: const Key('summary-expense-card'),
             title: 'Total Pengeluaran',
             value: formatRupiah(expense),
-            subtitle: 'Dana keluar (Expense)',
+            subtitle: '${summary?.expenseCategories.length ?? 0} kategori pengeluaran',
             icon: Icons.trending_down_rounded,
             accentColor: DompetKuColors.expenseRed,
           ),
@@ -406,92 +558,6 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           ],
         );
       },
-    );
-  }
-
-  Widget _buildCategoryBreakdown(FinancialSummary summary) {
-    final maxTotal = summary.byCategory.fold<double>(
-      1,
-      (prev, item) => item.total > prev ? item.total : prev,
-    );
-
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: DompetKuColors.card,
-        borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: DompetKuColors.glassBorder),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Row(
-            children: [
-              Icon(
-                Icons.pie_chart_outline_rounded,
-                size: 18,
-                color: DompetKuColors.secondary,
-              ),
-              SizedBox(width: 8),
-              Text(
-                'Ringkasan per Kategori',
-                style: TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w700,
-                  color: DompetKuColors.textPrimary,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 14),
-          ...summary.byCategory.take(5).map((item) {
-            final isIncome = item.type == 'income';
-            final barColor =
-                isIncome ? DompetKuColors.incomeGreen : DompetKuColors.expenseRed;
-            final ratio = (item.total / maxTotal).clamp(0.05, 1.0);
-
-            return Padding(
-              padding: const EdgeInsets.only(bottom: 10),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        '${item.category} (${item.count}x)',
-                        style: const TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w500,
-                          color: DompetKuColors.textPrimary,
-                        ),
-                      ),
-                      Text(
-                        formatRupiah(item.total),
-                        style: TextStyle(
-                          fontSize: 13,
-                          fontWeight: FontWeight.w700,
-                          color: barColor,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 6),
-                  ClipRRect(
-                    borderRadius: BorderRadius.circular(6),
-                    child: LinearProgressIndicator(
-                      value: ratio,
-                      minHeight: 7,
-                      backgroundColor: DompetKuColors.muted,
-                      valueColor: AlwaysStoppedAnimation<Color>(barColor),
-                    ),
-                  ),
-                ],
-              ),
-            );
-          }),
-        ],
-      ),
     );
   }
 
@@ -595,7 +661,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
 
     if (_transactions.isEmpty) {
       return Container(
-        padding: const EdgeInsets.symmetric(vertical: 48, horizontal: 20),
+        padding: const EdgeInsets.symmetric(vertical: 40, horizontal: 20),
         decoration: BoxDecoration(
           color: DompetKuColors.card,
           borderRadius: BorderRadius.circular(16),
@@ -605,23 +671,17 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           children: [
             Icon(
               Icons.receipt_long_outlined,
-              size: 44,
+              size: 40,
               color: DompetKuColors.textMuted,
             ),
-            SizedBox(height: 12),
+            SizedBox(height: 10),
             Text(
               'Belum ada transaksi pada filter ini',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: 15,
                 fontWeight: FontWeight.w600,
                 color: DompetKuColors.textPrimary,
               ),
-            ),
-            SizedBox(height: 4),
-            Text(
-              'Klik tombol "Tambah Transaksi" di kanan bawah untuk mencatat keuangan.',
-              textAlign: TextAlign.center,
-              style: TextStyle(color: DompetKuColors.textMuted, fontSize: 13),
             ),
           ],
         ),
@@ -633,13 +693,26 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
       children: [
         Padding(
           padding: const EdgeInsets.only(bottom: 10),
-          child: Text(
-            'Riwayat Transaksi (${_transactions.length})',
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.w700,
-              color: DompetKuColors.textPrimary,
-            ),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Riwayat Transaksi (${_transactions.length})',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w700,
+                  color: DompetKuColors.textPrimary,
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Flexible(
+                child: Text(
+                  'Klik ikon pensil untuk Edit atau Hapus',
+                  overflow: TextOverflow.ellipsis,
+                  style: TextStyle(fontSize: 11, color: DompetKuColors.textMuted),
+                ),
+              ),
+            ],
           ),
         ),
         ..._transactions.map((tx) {
@@ -703,7 +776,17 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                       color: amountColor,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
+                  IconButton(
+                    key: Key('edit-tx-${tx.id}'),
+                    tooltip: 'Edit Transaksi',
+                    icon: const Icon(
+                      Icons.edit_outlined,
+                      color: DompetKuColors.secondary,
+                      size: 19,
+                    ),
+                    onPressed: () => _openTransactionDialog(existing: tx),
+                  ),
                   IconButton(
                     key: Key('delete-tx-${tx.id}'),
                     tooltip: 'Hapus Transaksi',
@@ -720,6 +803,42 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           );
         }),
       ],
+    );
+  }
+}
+
+class _CredentialItem extends StatelessWidget {
+  final String label;
+  final String value;
+
+  const _CredentialItem({required this.label, required this.value});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 6),
+      child: Row(
+        children: [
+          SizedBox(
+            width: 90,
+            child: Text(
+              '$label:',
+              style: const TextStyle(
+                fontSize: 12,
+                color: DompetKuColors.textMuted,
+              ),
+            ),
+          ),
+          SelectableText(
+            value,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+              color: DompetKuColors.textPrimary,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -747,7 +866,7 @@ class _SummaryMetricCard extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       key: cardKey,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         gradient: isPrimary
             ? LinearGradient(
@@ -795,7 +914,7 @@ class _SummaryMetricCard extends StatelessWidget {
               ),
             ],
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 8),
           FittedBox(
             fit: BoxFit.scaleDown,
             alignment: Alignment.centerLeft,
@@ -808,11 +927,12 @@ class _SummaryMetricCard extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 6),
+          const SizedBox(height: 4),
           Text(
             subtitle,
+            overflow: TextOverflow.ellipsis,
             style: const TextStyle(
-              fontSize: 12,
+              fontSize: 11,
               color: DompetKuColors.textMuted,
             ),
           ),
@@ -822,37 +942,54 @@ class _SummaryMetricCard extends StatelessWidget {
   }
 }
 
-class AddTransactionDialog extends StatefulWidget {
+class TransactionFormDialog extends StatefulWidget {
   final ExpenseApiClient apiClient;
   final List<String> expenseCategories;
   final List<String> incomeCategories;
+  final ExpenseTransaction? existingTransaction;
 
-  const AddTransactionDialog({
+  const TransactionFormDialog({
     super.key,
     required this.apiClient,
     required this.expenseCategories,
     required this.incomeCategories,
+    this.existingTransaction,
   });
 
   @override
-  State<AddTransactionDialog> createState() => _AddTransactionDialogState();
+  State<TransactionFormDialog> createState() => _TransactionFormDialogState();
 }
 
-class _AddTransactionDialogState extends State<AddTransactionDialog> {
+class _TransactionFormDialogState extends State<TransactionFormDialog> {
   final GlobalKey<FormState> _formKey = GlobalKey<FormState>();
-  final TextEditingController _titleController = TextEditingController();
-  final TextEditingController _amountController = TextEditingController();
-  final TextEditingController _noteController = TextEditingController();
+  late final TextEditingController _titleController;
+  late final TextEditingController _amountController;
+  late final TextEditingController _noteController;
 
-  String _selectedType = 'expense';
+  late String _selectedType;
   late String _selectedCategory;
   bool _isSubmitting = false;
   String? _submitError;
 
+  bool get _isEditMode => widget.existingTransaction != null;
+
   @override
   void initState() {
     super.initState();
-    _selectedCategory = widget.expenseCategories.first;
+    final existing = widget.existingTransaction;
+    _titleController = TextEditingController(text: existing?.title ?? '');
+    _amountController = TextEditingController(
+      text: existing != null ? existing.amount.round().toString() : '',
+    );
+    _noteController = TextEditingController(text: existing?.note ?? '');
+    _selectedType = existing?.type ?? 'expense';
+
+    final allowed = _currentCategories;
+    if (existing != null && allowed.contains(existing.category)) {
+      _selectedCategory = existing.category;
+    } else {
+      _selectedCategory = allowed.first;
+    }
   }
 
   @override
@@ -881,13 +1018,24 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
         _amountController.text.replaceAll('.', '').replaceAll(',', '').trim(),
       );
 
-      await widget.apiClient.createTransaction(
-        title: _titleController.text.trim(),
-        amount: parsedAmount,
-        type: _selectedType,
-        category: _selectedCategory,
-        note: _noteController.text.trim(),
-      );
+      if (_isEditMode) {
+        await widget.apiClient.updateTransaction(
+          id: widget.existingTransaction!.id,
+          title: _titleController.text.trim(),
+          amount: parsedAmount,
+          type: _selectedType,
+          category: _selectedCategory,
+          note: _noteController.text.trim(),
+        );
+      } else {
+        await widget.apiClient.createTransaction(
+          title: _titleController.text.trim(),
+          amount: parsedAmount,
+          type: _selectedType,
+          category: _selectedCategory,
+          note: _noteController.text.trim(),
+        );
+      }
 
       if (!mounted) return;
       Navigator.of(context).pop(true);
@@ -908,9 +1056,9 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
         borderRadius: BorderRadius.circular(18),
         side: const BorderSide(color: DompetKuColors.glassBorder),
       ),
-      title: const Text(
-        'Tambah Transaksi Baru',
-        style: TextStyle(
+      title: Text(
+        _isEditMode ? 'Edit Transaksi' : 'Tambah Transaksi Baru',
+        style: const TextStyle(
           fontSize: 18,
           fontWeight: FontWeight.w700,
           color: DompetKuColors.textPrimary,
@@ -1042,7 +1190,8 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
       ),
       actions: [
         TextButton(
-          onPressed: _isSubmitting ? null : () => Navigator.of(context).pop(false),
+          onPressed:
+              _isSubmitting ? null : () => Navigator.of(context).pop(false),
           child: const Text('Batal'),
         ),
         FilledButton.icon(
@@ -1055,7 +1204,11 @@ class _AddTransactionDialogState extends State<AddTransactionDialog> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.check_rounded),
-          label: Text(_isSubmitting ? 'Menyimpan...' : 'Simpan'),
+          label: Text(
+            _isSubmitting
+                ? 'Menyimpan...'
+                : (_isEditMode ? 'Simpan Perubahan' : 'Simpan'),
+          ),
         ),
       ],
     );

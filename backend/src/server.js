@@ -1,7 +1,10 @@
 const { Pool } = require('pg');
+const { createClient } = require('redis');
 const { createApp } = require('./app');
 
 const PORT = Number(process.env.PORT || 4000);
+const SUMMARY_CACHE_KEY = 'dompetku:summary:v2';
+const SUMMARY_CACHE_TTL_SEC = 60;
 
 const pool = new Pool({
   host: process.env.DB_HOST || 'localhost',
@@ -10,6 +13,68 @@ const pool = new Pool({
   password: process.env.DB_PASSWORD || 'dompetku_secret',
   database: process.env.DB_NAME || 'dompetku_db',
 });
+
+const redisHost = process.env.REDIS_HOST || 'localhost';
+const redisPort = Number(process.env.REDIS_PORT || 6379);
+const redisUrl = process.env.REDIS_URL || `redis://${redisHost}:${redisPort}`;
+
+const redisClient = createClient({ url: redisUrl });
+let isRedisReady = false;
+
+redisClient.on('ready', () => {
+  isRedisReady = true;
+  console.log(`[Backend] Terhubung ke Redis Cache di ${redisUrl}`);
+});
+
+redisClient.on('error', (err) => {
+  isRedisReady = false;
+  console.warn(`[Backend] Redis belum tersedia (${err.message})`);
+});
+
+async function connectRedisNonBlocking() {
+  try {
+    await redisClient.connect();
+  } catch (err) {
+    console.warn(`[Backend] Berjalan tanpa Redis sementara: ${err.message}`);
+  }
+}
+
+const redisCache = {
+  async ping() {
+    if (!isRedisReady) return false;
+    const pong = await redisClient.ping();
+    return pong === 'PONG';
+  },
+  async getSummary() {
+    if (!isRedisReady) return null;
+    try {
+      const raw = await redisClient.get(SUMMARY_CACHE_KEY);
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  },
+  async setSummary(summaryData) {
+    if (!isRedisReady) return;
+    try {
+      await redisClient.setEx(
+        SUMMARY_CACHE_KEY,
+        SUMMARY_CACHE_TTL_SEC,
+        JSON.stringify(summaryData)
+      );
+    } catch {
+      // ignore cache write failure
+    }
+  },
+  async invalidateSummary() {
+    if (!isRedisReady) return;
+    try {
+      await redisClient.del(SUMMARY_CACHE_KEY);
+    } catch {
+      // ignore cache delete failure
+    }
+  },
+};
 
 async function ensureSchemaWithRetry(retries = 15, delayMs = 2000) {
   for (let attempt = 1; attempt <= retries; attempt++) {
@@ -91,6 +156,18 @@ const pgRepository = {
     return mapRow(result.rows[0]);
   },
 
+  async updateTransaction(id, { title, amount, type, category, note }) {
+    const sql = `
+      UPDATE transactions
+      SET title = $1, amount = $2, type = $3, category = $4, note = $5
+      WHERE id = $6
+      RETURNING id, title, amount, type, category, note, created_at
+    `;
+    const result = await pool.query(sql, [title, amount, type, category, note, id]);
+    if (result.rowCount === 0) return null;
+    return mapRow(result.rows[0]);
+  },
+
   async deleteTransaction(id) {
     const result = await pool.query('DELETE FROM transactions WHERE id = $1 RETURNING id', [id]);
     return result.rowCount > 0;
@@ -99,9 +176,10 @@ const pgRepository = {
 
 async function start() {
   await ensureSchemaWithRetry();
-  const app = createApp(pgRepository);
+  await connectRedisNonBlocking();
+  const app = createApp(pgRepository, redisCache);
   app.listen(PORT, '0.0.0.0', () => {
-    console.log(`[Backend] DompetKu REST API berjalan di http://0.0.0.0:${PORT}`);
+    console.log(`[Backend] DompetKu REST API v2.0 berjalan di http://0.0.0.0:${PORT}`);
   });
 }
 
@@ -112,4 +190,4 @@ if (require.main === module) {
   });
 }
 
-module.exports = { pgRepository };
+module.exports = { pgRepository, redisCache };

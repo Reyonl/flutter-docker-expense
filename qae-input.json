@@ -1,7 +1,7 @@
 {
-  "feature": "dompetku-flutter-docker-expense",
-  "commit_sha": "e9c2c48c89b64a09432130109098b0449efe3b7e",
-  "run_started_at": "2026-11-01T06:55:22.018Z",
+  "feature": "dompetku-flutter-docker-expense-v2",
+  "commit_sha": "f7a66b3df755ce7639b0de761f3700ab9590725e",
+  "run_started_at": "2026-11-01T07:37:51.306Z",
   "expected_criteria": [
     "EXP-001",
     "EXP-002",
@@ -9,7 +9,9 @@
     "EXP-004",
     "EXP-005",
     "EXP-006",
-    "EXP-007"
+    "EXP-007",
+    "EXP-008",
+    "EXP-009"
   ],
   "required_layers": [
     "integration",
@@ -22,7 +24,7 @@
   "criteria": [
     {
       "id": "EXP-001",
-      "title": "Docker containers healthy & GET /api/health returns 200 OK with containerId",
+      "title": "All 5 Docker containers (db, redis, adminer, backend, frontend) healthy & GET /api/health returns 200 OK",
       "layer": "integration",
       "status": "PASS",
       "mandatory": true,
@@ -42,7 +44,7 @@
     },
     {
       "id": "EXP-003",
-      "title": "Negative input validation rejects invalid amounts, empty title, and invalid type with HTTP 400",
+      "title": "Negative input validation on POST/PUT rejects invalid amounts, empty title, and non-existent ID",
       "layer": "api",
       "status": "PASS",
       "mandatory": true,
@@ -72,7 +74,7 @@
     },
     {
       "id": "EXP-006",
-      "title": "Backend unit tests and Flutter widget tests pass with 0 warnings/errors",
+      "title": "Backend unit tests and Flutter widget tests (including Charts & Edit) pass with 0 warnings/errors",
       "layer": "unit",
       "status": "PASS",
       "mandatory": true,
@@ -82,13 +84,33 @@
     },
     {
       "id": "EXP-007",
-      "title": "Selenium WebDriver E2E test on Flutter Web container (http://localhost:8080) with screenshot",
+      "title": "Selenium WebDriver E2E test on Flutter Web Pro Dashboard (http://localhost:8080) with screenshot",
       "layer": "e2e",
       "status": "PASS",
       "mandatory": true,
       "evidence": [
         "evidence/EXP-007-selenium-e2e.json",
         "evidence/EXP-007-selenium-ui.png"
+      ]
+    },
+    {
+      "id": "EXP-008",
+      "title": "Edit / Update Transaction (PUT /api/transactions/:id) updates existing record and recalculates balance",
+      "layer": "api",
+      "status": "PASS",
+      "mandatory": true,
+      "evidence": [
+        "evidence/EXP-008-edit-transaction.json"
+      ]
+    },
+    {
+      "id": "EXP-009",
+      "title": "Redis Cache (MISS -> HIT -> Flush) & Adminer Database Web GUI (http://localhost:8081) verified",
+      "layer": "integration",
+      "status": "PASS",
+      "mandatory": true,
+      "evidence": [
+        "evidence/EXP-009-redis-adminer.json"
       ]
     }
   ],
@@ -97,14 +119,14 @@
       "command_executed": true,
       "exit_code": 0,
       "status": "PASS",
-      "tests_executed": 1,
+      "tests_executed": 3,
       "failures": 0
     },
     "api": {
       "command_executed": true,
       "exit_code": 0,
       "status": "PASS",
-      "tests_executed": 5,
+      "tests_executed": 6,
       "failures": 0
     },
     "database": {

@@ -14,7 +14,7 @@ def run_selenium_e2e(base_url: str, commit_sha: str, evidence_dir: str) -> dict:
 
     options = webdriver.ChromeOptions()
     options.add_argument("--headless=new")
-    options.add_argument("--window-size=1366,900")
+    options.add_argument("--window-size=1400,1050")
     options.add_argument("--no-sandbox")
     options.add_argument("--disable-dev-shm-usage")
     options.set_capability("goog:loggingPrefs", {"browser": "ALL"})
@@ -28,50 +28,66 @@ def run_selenium_e2e(base_url: str, commit_sha: str, evidence_dir: str) -> dict:
     network_errors = []
 
     try:
-        steps.append(f"Step 1: Open Dockerized Flutter Web app at {base_url}")
+        steps.append(f"Step 1: Open Dockerized Flutter Web Pro Dashboard at {base_url}")
         driver.get(base_url)
 
         steps.append("Step 2: Explicit wait for document title and Flutter root element (flutter-view / flt-glass-pane)")
-        wait.until(lambda d: "dompetku" in d.title.lower() or "frontend" in d.title.lower() or len(d.title) > 0)
-        flutter_host = wait.until(
-            EC.presence_of_element_located((By.CSS_SELECTOR, "flutter-view, flt-glass-pane, body"))
-        )
-
-        # Wait explicitly until Flutter engine attaches its rendering surface AND initial /api/summary finishes
+        wait.until(lambda d: len(d.title) > 0)
         wait.until(
             lambda d: d.execute_script(
                 "return document.querySelector('flutter-view, flt-glass-pane') !== null;"
             )
         )
 
-        steps.append("Step 3: Verify Nginx reverse-proxy /api/summary and /api/transactions from browser context")
+        steps.append("Step 3: Verify Nginx proxy for Create, Edit (PUT), and Redis Cache (MISS -> HIT) from browser context")
         browser_api_check = driver.execute_async_script(
             """
             const done = arguments[arguments.length - 1];
             (async () => {
               try {
-                const sumRes = await fetch('/api/summary');
-                const sumData = await sumRes.json();
+                // 1. Create a transaction
                 const createRes = await fetch('/api/transactions', {
                   method: 'POST',
                   headers: { 'Content-Type': 'application/json' },
                   body: JSON.stringify({
-                    title: 'Belajar Docker Compose E2E',
-                    amount: 125000,
+                    title: 'Langganan Docker Pro (Draft)',
+                    amount: 100000,
                     type: 'expense',
                     category: 'Edukasi',
-                    note: 'Diverifikasi otomatis oleh Selenium WebDriver'
+                    note: 'Sebelum diedit'
                   })
                 });
                 const createData = await createRes.json();
-                const sumAfterRes = await fetch('/api/summary');
-                const sumAfterData = await sumAfterRes.json();
+                const txId = createData.item.id;
+
+                // 2. Edit (PUT) the transaction
+                const editRes = await fetch(`/api/transactions/${txId}`, {
+                  method: 'PUT',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({
+                    title: 'Langganan Docker Pro & Redis (Edited)',
+                    amount: 175000,
+                    type: 'expense',
+                    category: 'Edukasi',
+                    note: 'Diverifikasi Edit + Redis Cache E2E'
+                  })
+                });
+                const editData = await editRes.json();
+
+                // 3. First summary fetch after PUT -> MISS, second -> HIT
+                const sumMissRes = await fetch('/api/summary');
+                const sumMissData = await sumMissRes.json();
+                const sumHitRes = await fetch('/api/summary');
+                const sumHitData = await sumHitRes.json();
+
                 done({
-                  ok: sumRes.status === 200 && createRes.status === 201 && sumAfterRes.status === 200,
-                  initialBalance: sumData.balance,
-                  createdId: createData.item ? createData.item.id : null,
-                  updatedBalance: sumAfterData.balance,
-                  containerId: sumAfterData.containerId
+                  ok: createRes.status === 201 && editRes.status === 200 && sumMissData.cacheStatus === 'MISS' && sumHitData.cacheStatus === 'HIT',
+                  editedTitle: editData.item.title,
+                  editedAmount: editData.item.amount,
+                  firstCache: sumMissData.cacheStatus,
+                  secondCache: sumHitData.cacheStatus,
+                  updatedBalance: sumHitData.balance,
+                  containerId: sumHitData.containerId
                 });
               } catch (err) {
                 done({ ok: false, error: String(err) });
@@ -83,12 +99,20 @@ def run_selenium_e2e(base_url: str, commit_sha: str, evidence_dir: str) -> dict:
         if not browser_api_check.get("ok"):
             network_errors.append(f"Browser API check failed: {browser_api_check}")
 
-        # Reload page and wait explicitly for Flutter canvas/view to render the updated state
-        steps.append("Step 4: Reload Flutter Web UI and wait for rendered canvas surface")
+        steps.append("Step 4: Reload Flutter Web UI so it renders with Redis Cache: HIT and Donut/Cashflow Charts")
         driver.refresh()
         wait.until(
             lambda d: d.execute_script(
                 "return document.querySelector('flutter-view, flt-glass-pane') !== null && document.readyState === 'complete';"
+            )
+        )
+        # Wait explicitly for Flutter first frame paint on canvas/scene
+        wait.until(
+            lambda d: d.execute_script(
+                """
+                const fv = document.querySelector('flutter-view, flt-glass-pane');
+                return fv !== null && fv.clientHeight > 400;
+                """
             )
         )
         flutter_host = wait.until(
@@ -104,6 +128,7 @@ def run_selenium_e2e(base_url: str, commit_sha: str, evidence_dir: str) -> dict:
                 msg = entry.get("message", "")
                 if "favicon.ico" not in msg:
                     console_errors.append(msg)
+
         passed = (
             bool(browser_api_check.get("ok"))
             and len(console_errors) == 0
@@ -117,12 +142,13 @@ def run_selenium_e2e(base_url: str, commit_sha: str, evidence_dir: str) -> dict:
             "commit_sha": commit_sha,
             "exit_code": 0 if passed else 1,
             "failures": 0 if passed else 1,
-            "scenario": "EXP-007: Flutter Web Docker Container UI + Nginx Reverse Proxy E2E",
+            "scenario": "EXP-007: Flutter Web v2.0 Fintech Pro Dashboard (Charts + Edit + Redis HIT/MISS) E2E",
             "steps": steps,
-            "expected_result": "Flutter Web loads at http://localhost:8080, communicates with backend container via /api/* proxy, updates balance, and renders with 0 console/network errors.",
+            "expected_result": "Flutter Web v2.0 loads at http://localhost:8080, executes Create + Edit (PUT), transitions Redis cache from MISS to HIT, and renders with 0 console/network errors.",
             "actual_result": (
                 f"Flutter root <{dom_tag}> rendered; containerId={browser_api_check.get('containerId')}; "
-                f"initialBalance={browser_api_check.get('initialBalance')} -> updatedBalance={browser_api_check.get('updatedBalance')}"
+                f"editedTitle='{browser_api_check.get('editedTitle')}'; cache={browser_api_check.get('firstCache')}->{browser_api_check.get('secondCache')}; "
+                f"balance={browser_api_check.get('updatedBalance')}"
             ),
             "evidence": {
                 "screenshot": screenshot_rel,

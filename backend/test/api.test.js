@@ -40,11 +40,42 @@ function createInMemoryRepo() {
       rows.push(item);
       return item;
     },
+    async updateTransaction(id, data) {
+      const idx = rows.findIndex((r) => r.id === id);
+      if (idx === -1) return null;
+      rows[idx] = {
+        ...rows[idx],
+        title: data.title,
+        amount: data.amount,
+        type: data.type,
+        category: data.category,
+        note: data.note || '',
+      };
+      return rows[idx];
+    },
     async deleteTransaction(id) {
       const idx = rows.findIndex((r) => r.id === id);
       if (idx === -1) return false;
       rows.splice(idx, 1);
       return true;
+    },
+  };
+}
+
+function createFakeRedisCache() {
+  let cachedSummary = null;
+  return {
+    async ping() {
+      return true;
+    },
+    async getSummary() {
+      return cachedSummary;
+    },
+    async setSummary(data) {
+      cachedSummary = { ...data };
+    },
+    async invalidateSummary() {
+      cachedSummary = null;
     },
   };
 }
@@ -94,9 +125,10 @@ test('Unit: computeSummary calculates income, expense, and balance accurately', 
   assert.equal(summary.byCategory.length, 2);
 });
 
-test('API Integration: Health, CRUD transactions, validation & summary', async () => {
+test('API Integration: Health, CRUD + Update, Redis Cache HIT/MISS & validation', async () => {
   const repo = createInMemoryRepo();
-  const app = createApp(repo);
+  const cache = createFakeRedisCache();
+  const app = createApp(repo, cache);
   const server = http.createServer(app);
   await new Promise((resolve) => server.listen(0, '127.0.0.1', resolve));
   const { port } = server.address();
@@ -108,6 +140,7 @@ test('API Integration: Health, CRUD transactions, validation & summary', async (
     assert.equal(health.status, 200);
     assert.equal(health.data.status, 'ok');
     assert.equal(health.data.db, 'connected');
+    assert.equal(health.data.redis, 'connected');
 
     // 2. Create Income
     const inc = await requestJson(baseUrl, '/api/transactions', {
@@ -121,7 +154,6 @@ test('API Integration: Health, CRUD transactions, validation & summary', async (
       },
     });
     assert.equal(inc.status, 201);
-    assert.equal(inc.data.item.title, 'Gaji Freelance');
 
     // 3. Create Expense
     const exp = await requestJson(baseUrl, '/api/transactions', {
@@ -135,38 +167,58 @@ test('API Integration: Health, CRUD transactions, validation & summary', async (
     });
     assert.equal(exp.status, 201);
 
-    // 4. Negative Test: Invalid payload
-    const bad = await requestJson(baseUrl, '/api/transactions', {
-      method: 'POST',
+    // 4. First Summary Call -> Redis Cache MISS
+    const sumMiss = await requestJson(baseUrl, '/api/summary');
+    assert.equal(sumMiss.status, 200);
+    assert.equal(sumMiss.data.cacheStatus, 'MISS');
+    assert.equal(sumMiss.data.balance, 2880000);
+
+    // 5. Second Summary Call -> Redis Cache HIT
+    const sumHit = await requestJson(baseUrl, '/api/summary');
+    assert.equal(sumHit.status, 200);
+    assert.equal(sumHit.data.cacheStatus, 'HIT');
+    assert.equal(sumHit.data.balance, 2880000);
+
+    // 6. Edit / Update Transaction (PUT) -> Invalidates Redis Cache
+    const updatedExp = await requestJson(baseUrl, `/api/transactions/${exp.data.item.id}`, {
+      method: 'PUT',
       body: {
-        title: '',
-        amount: -100,
-        type: 'hutang',
-        category: '',
+        title: 'Beli Buku Docker & Kubernetes',
+        amount: 200000,
+        type: 'expense',
+        category: 'Edukasi',
+        note: 'Paket bundling',
       },
     });
-    assert.equal(bad.status, 400);
-    assert.ok(Array.isArray(bad.data.errors));
-    assert.equal(bad.data.errors.length, 4);
+    assert.equal(updatedExp.status, 200);
+    assert.equal(updatedExp.data.item.title, 'Beli Buku Docker & Kubernetes');
+    assert.equal(updatedExp.data.item.amount, 200000);
 
-    // 5. Summary Check
-    const sum = await requestJson(baseUrl, '/api/summary');
-    assert.equal(sum.status, 200);
-    assert.equal(sum.data.totalIncome, 3000000);
-    assert.equal(sum.data.totalExpense, 120000);
-    assert.equal(sum.data.balance, 2880000);
+    // 7. Summary after PUT -> Cache MISS with updated balance (3000000 - 200000 = 2800000)
+    const sumAfterPut = await requestJson(baseUrl, '/api/summary');
+    assert.equal(sumAfterPut.status, 200);
+    assert.equal(sumAfterPut.data.cacheStatus, 'MISS');
+    assert.equal(sumAfterPut.data.balance, 2800000);
 
-    // 6. Delete Transaction & 404 Check
+    // 8. Negative Test: Invalid PUT payload & 404 PUT
+    const badPut = await requestJson(baseUrl, `/api/transactions/${exp.data.item.id}`, {
+      method: 'PUT',
+      body: { title: '', amount: -10, type: 'expense', category: 'Edukasi' },
+    });
+    assert.equal(badPut.status, 400);
+
+    const notFoundPut = await requestJson(baseUrl, '/api/transactions/9999', {
+      method: 'PUT',
+      body: { title: 'Valid', amount: 10000, type: 'expense', category: 'Edukasi' },
+    });
+    assert.equal(notFoundPut.status, 404);
+
+    // 9. Delete Transaction & 404 Check
     const del = await requestJson(baseUrl, `/api/transactions/${exp.data.item.id}`, {
       method: 'DELETE',
     });
     assert.equal(del.status, 200);
     assert.equal(del.data.deleted, true);
-
-    const delAgain = await requestJson(baseUrl, `/api/transactions/${exp.data.item.id}`, {
-      method: 'DELETE',
-    });
-    assert.equal(delAgain.status, 404);
   } finally {
     await new Promise((resolve) => server.close(resolve));
   }

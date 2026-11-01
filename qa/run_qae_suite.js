@@ -6,6 +6,7 @@ const ROOT_DIR = path.resolve(__dirname, '..');
 const EVIDENCE_DIR = path.join(ROOT_DIR, 'evidence');
 const API_BASE = process.env.API_BASE_URL || 'http://localhost:4000/api';
 const WEB_BASE = process.env.WEB_BASE_URL || 'http://localhost:8080';
+const ADMINER_BASE = process.env.ADMINER_BASE_URL || 'http://localhost:8081';
 
 function getCommitSha() {
   return execSync('git rev-parse HEAD', { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
@@ -16,6 +17,7 @@ async function reqJson(url, options = {}) {
     ...options,
     headers: {
       'Content-Type': 'application/json',
+      Connection: 'close',
       ...(options.headers || {}),
     },
   });
@@ -35,17 +37,20 @@ async function main() {
   const commitSha = getCommitSha();
   fs.mkdirSync(EVIDENCE_DIR, { recursive: true });
 
-  console.log(`[QAE] Memulai eksekusi suite pada commit ${commitSha} (${runStartedAt})`);
+  console.log(`[QAE v2.0] Memulai eksekusi suite pada commit ${commitSha} (${runStartedAt})`);
 
   // -------------------------------------------------------------------------
-  // EXP-001: Docker Container Health & Orchestration
+  // EXP-001: 5-Container Health & Orchestration (Postgres + Redis + Adminer + Backend + Frontend)
   // -------------------------------------------------------------------------
   const psOutput = execSync('docker compose ps --format json', { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
+  const containers = psOutput.split('\n').filter(Boolean).map((line) => JSON.parse(line));
   const healthRes = await reqJson(`${API_BASE}/health`);
   const exp001Pass =
+    containers.length >= 5 &&
     healthRes.status === 200 &&
     healthRes.body.status === 'ok' &&
     healthRes.body.db === 'connected' &&
+    healthRes.body.redis === 'connected' &&
     Boolean(healthRes.body.containerId);
 
   writeEvidence('EXP-001-health.json', {
@@ -56,7 +61,8 @@ async function main() {
     failures: exp001Pass ? 0 : 1,
     http_status: healthRes.status,
     health_payload: healthRes.body,
-    docker_compose_ps: psOutput.split('\n').filter(Boolean).map((line) => JSON.parse(line)),
+    running_containers_count: containers.length,
+    docker_compose_ps: containers,
   });
 
   // -------------------------------------------------------------------------
@@ -66,7 +72,7 @@ async function main() {
   const createdInc = await reqJson(`${API_BASE}/transactions`, {
     method: 'POST',
     body: JSON.stringify({
-      title: 'Bonus Project Docker',
+      title: 'Bonus Project Docker v2',
       amount: 2000000,
       type: 'income',
       category: 'Bonus',
@@ -110,7 +116,7 @@ async function main() {
   });
 
   // -------------------------------------------------------------------------
-  // EXP-003: Negative Input Validation
+  // EXP-003: Negative Input Validation (POST & PUT)
   // -------------------------------------------------------------------------
   const negAmount = await reqJson(`${API_BASE}/transactions`, {
     method: 'POST',
@@ -130,20 +136,20 @@ async function main() {
       category: 'Makanan',
     }),
   });
-  const invalidType = await reqJson(`${API_BASE}/transactions`, {
-    method: 'POST',
+  const invalidPut = await reqJson(`${API_BASE}/transactions/999999`, {
+    method: 'PUT',
     body: JSON.stringify({
-      title: 'Tipe Salah',
+      title: 'Tidak Ada ID',
       amount: 50000,
-      type: 'pinjaman',
-      category: 'Lainnya',
+      type: 'expense',
+      category: 'Makanan',
     }),
   });
 
   const exp003Pass =
     negAmount.status === 400 &&
     emptyTitle.status === 400 &&
-    invalidType.status === 400;
+    invalidPut.status === 404;
 
   writeEvidence('EXP-003-negative-validation.json', {
     id: 'EXP-003',
@@ -153,7 +159,7 @@ async function main() {
     failures: exp003Pass ? 0 : 1,
     negative_amount_response: negAmount,
     empty_title_response: emptyTitle,
-    invalid_type_response: invalidType,
+    not_found_put_response: invalidPut,
   });
 
   // -------------------------------------------------------------------------
@@ -161,14 +167,12 @@ async function main() {
   // -------------------------------------------------------------------------
   const pgQueryCmd = `docker exec expense-db psql -U dompetku -d dompetku_db -t -A -c "SELECT COUNT(*) || '|' || COALESCE(SUM(amount),0) FROM transactions;"`;
   const rawPgBeforeRestart = execSync(pgQueryCmd, { cwd: ROOT_DIR, encoding: 'utf8' }).trim();
-  // Restart backend to confirm stateless container reconnects & volume persists
   execSync('docker restart expense-backend', { cwd: ROOT_DIR, stdio: 'pipe' });
-  // Wait until backend is healthy again
   let backendReady = false;
   for (let i = 0; i < 15; i++) {
     try {
       const check = await reqJson(`${API_BASE}/health`);
-      if (check.status === 200 && check.body.db === 'connected') {
+      if (check.status === 200 && check.body.db === 'connected' && check.body.redis === 'connected') {
         backendReady = true;
         break;
       }
@@ -257,6 +261,64 @@ async function main() {
   });
 
   // -------------------------------------------------------------------------
+  // EXP-008: Edit / Update Transaction (PUT /api/transactions/:id)
+  // -------------------------------------------------------------------------
+  const targetTxId = createdExp.body.item.id;
+  const editRes = await reqJson(`${API_BASE}/transactions/${targetTxId}`, {
+    method: 'PUT',
+    body: JSON.stringify({
+      title: 'Langganan Server Cloud & Redis (Edited)',
+      amount: 300000,
+      type: 'expense',
+      category: 'Tagihan',
+      note: 'Telah diedit melalui PUT /api/transactions/:id',
+    }),
+  });
+  const exp008Pass =
+    editRes.status === 200 &&
+    editRes.body.item.id === targetTxId &&
+    editRes.body.item.title === 'Langganan Server Cloud & Redis (Edited)' &&
+    Number(editRes.body.item.amount) === 300000;
+
+  writeEvidence('EXP-008-edit-transaction.json', {
+    id: 'EXP-008',
+    status: exp008Pass ? 'PASS' : 'FAIL',
+    commit_sha: commitSha,
+    exit_code: exp008Pass ? 0 : 1,
+    failures: exp008Pass ? 0 : 1,
+    updated_transaction: editRes.body.item,
+  });
+
+  // -------------------------------------------------------------------------
+  // EXP-009: Redis Cache (Flush -> MISS -> HIT) & Adminer Web GUI (:8081)
+  // -------------------------------------------------------------------------
+  const flushRes = await reqJson(`${API_BASE}/cache/flush`, { method: 'POST' });
+  const sumAfterFlush = await reqJson(`${API_BASE}/summary`);
+  const sumSecondCall = await reqJson(`${API_BASE}/summary`);
+  const adminerHtmlRes = await fetch(ADMINER_BASE);
+  const adminerHtmlText = await adminerHtmlRes.text();
+
+  const exp009Pass =
+    flushRes.status === 200 &&
+    sumAfterFlush.body.cacheStatus === 'MISS' &&
+    sumSecondCall.body.cacheStatus === 'HIT' &&
+    adminerHtmlRes.status === 200 &&
+    adminerHtmlText.toLowerCase().includes('adminer');
+
+  writeEvidence('EXP-009-redis-adminer.json', {
+    id: 'EXP-009',
+    status: exp009Pass ? 'PASS' : 'FAIL',
+    commit_sha: commitSha,
+    exit_code: exp009Pass ? 0 : 1,
+    failures: exp009Pass ? 0 : 1,
+    flush_response: flushRes.body,
+    first_summary_cache_status: sumAfterFlush.body.cacheStatus,
+    second_summary_cache_status: sumSecondCall.body.cacheStatus,
+    adminer_http_status: adminerHtmlRes.status,
+    adminer_title_verified: adminerHtmlText.toLowerCase().includes('adminer'),
+  });
+
+  // -------------------------------------------------------------------------
   // EXP-007: Browser E2E via Selenium WebDriver
   // -------------------------------------------------------------------------
   execSync(`python qa/selenium_e2e.py "${WEB_BASE}" "${commitSha}" "${EVIDENCE_DIR}"`, {
@@ -279,16 +341,18 @@ async function main() {
     'EXP-005',
     'EXP-006',
     'EXP-007',
+    'EXP-008',
+    'EXP-009',
   ];
 
   const qaeSpec = {
-    feature: 'dompetku-flutter-docker-expense',
+    feature: 'dompetku-flutter-docker-expense-v2',
     expected_criteria: expectedCriteria,
   };
   fs.writeFileSync(path.join(ROOT_DIR, 'qae-spec.json'), JSON.stringify(qaeSpec, null, 2), 'utf8');
 
   const qaeInput = {
-    feature: 'dompetku-flutter-docker-expense',
+    feature: 'dompetku-flutter-docker-expense-v2',
     commit_sha: commitSha,
     run_started_at: runStartedAt,
     expected_criteria: expectedCriteria,
@@ -296,7 +360,7 @@ async function main() {
     criteria: [
       {
         id: 'EXP-001',
-        title: 'Docker containers healthy & GET /api/health returns 200 OK with containerId',
+        title: 'All 5 Docker containers (db, redis, adminer, backend, frontend) healthy & GET /api/health returns 200 OK',
         layer: 'integration',
         status: exp001Pass ? 'PASS' : 'FAIL',
         mandatory: true,
@@ -312,7 +376,7 @@ async function main() {
       },
       {
         id: 'EXP-003',
-        title: 'Negative input validation rejects invalid amounts, empty title, and invalid type with HTTP 400',
+        title: 'Negative input validation on POST/PUT rejects invalid amounts, empty title, and non-existent ID',
         layer: 'api',
         status: exp003Pass ? 'PASS' : 'FAIL',
         mandatory: true,
@@ -336,7 +400,7 @@ async function main() {
       },
       {
         id: 'EXP-006',
-        title: 'Backend unit tests and Flutter widget tests pass with 0 warnings/errors',
+        title: 'Backend unit tests and Flutter widget tests (including Charts & Edit) pass with 0 warnings/errors',
         layer: 'unit',
         status: exp006Pass ? 'PASS' : 'FAIL',
         mandatory: true,
@@ -344,27 +408,43 @@ async function main() {
       },
       {
         id: 'EXP-007',
-        title: 'Selenium WebDriver E2E test on Flutter Web container (http://localhost:8080) with screenshot',
+        title: 'Selenium WebDriver E2E test on Flutter Web Pro Dashboard (http://localhost:8080) with screenshot',
         layer: 'e2e',
         status: exp007Pass ? 'PASS' : 'FAIL',
         mandatory: true,
         evidence: ['evidence/EXP-007-selenium-e2e.json', 'evidence/EXP-007-selenium-ui.png'],
       },
+      {
+        id: 'EXP-008',
+        title: 'Edit / Update Transaction (PUT /api/transactions/:id) updates existing record and recalculates balance',
+        layer: 'api',
+        status: exp008Pass ? 'PASS' : 'FAIL',
+        mandatory: true,
+        evidence: ['evidence/EXP-008-edit-transaction.json'],
+      },
+      {
+        id: 'EXP-009',
+        title: 'Redis Cache (MISS -> HIT -> Flush) & Adminer Database Web GUI (http://localhost:8081) verified',
+        layer: 'integration',
+        status: exp009Pass ? 'PASS' : 'FAIL',
+        mandatory: true,
+        evidence: ['evidence/EXP-009-redis-adminer.json'],
+      },
     ],
     test_execution: {
       integration: {
         command_executed: true,
-        exit_code: exp001Pass ? 0 : 1,
-        status: exp001Pass ? 'PASS' : 'FAIL',
-        tests_executed: 1,
-        failures: exp001Pass ? 0 : 1,
+        exit_code: exp001Pass && exp009Pass ? 0 : 1,
+        status: exp001Pass && exp009Pass ? 'PASS' : 'FAIL',
+        tests_executed: 3,
+        failures: exp001Pass && exp009Pass ? 0 : 1,
       },
       api: {
         command_executed: true,
-        exit_code: exp002Pass && exp003Pass ? 0 : 1,
-        status: exp002Pass && exp003Pass ? 'PASS' : 'FAIL',
-        tests_executed: 5,
-        failures: exp002Pass && exp003Pass ? 0 : 1,
+        exit_code: exp002Pass && exp003Pass && exp008Pass ? 0 : 1,
+        status: exp002Pass && exp003Pass && exp008Pass ? 'PASS' : 'FAIL',
+        tests_executed: 6,
+        failures: exp002Pass && exp003Pass && exp008Pass ? 0 : 1,
       },
       database: {
         command_executed: true,
@@ -401,10 +481,10 @@ async function main() {
   };
 
   fs.writeFileSync(path.join(ROOT_DIR, 'qae-input.json'), JSON.stringify(qaeInput, null, 2), 'utf8');
-  console.log('[QAE] Seluruh evidence berhasil dikumpulkan ke folder evidence/ dan qae-input.json');
+  console.log('[QAE v2.0] Seluruh evidence berhasil dikumpulkan ke folder evidence/ dan qae-input.json');
 }
 
 main().catch((err) => {
-  console.error('[QAE] Error:', err);
+  console.error('[QAE v2.0] Error:', err);
   process.exit(1);
 });

@@ -15,7 +15,16 @@ abstract class ExpenseApiClient {
     required String category,
     String note = '',
   });
+  Future<ExpenseTransaction> updateTransaction({
+    required int id,
+    required String title,
+    required double amount,
+    required String type,
+    required String category,
+    String note = '',
+  });
   Future<void> deleteTransaction(int id);
+  Future<void> flushRedisCache();
 }
 
 class HttpExpenseApiClient implements ExpenseApiClient {
@@ -100,11 +109,49 @@ class HttpExpenseApiClient implements ExpenseApiClient {
   }
 
   @override
+  Future<ExpenseTransaction> updateTransaction({
+    required int id,
+    required String title,
+    required double amount,
+    required String type,
+    required String category,
+    String note = '',
+  }) async {
+    final uri = Uri.parse('$baseUrl/transactions/$id');
+    final response = await _client.put(
+      uri,
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'title': title,
+        'amount': amount,
+        'type': type,
+        'category': category,
+        'note': note,
+      }),
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      final errMsg = (data['error'] as String?) ?? 'Gagal memperbarui transaksi';
+      throw Exception(errMsg);
+    }
+    return ExpenseTransaction.fromJson(data['item'] as Map<String, dynamic>);
+  }
+
+  @override
   Future<void> deleteTransaction(int id) async {
     final uri = Uri.parse('$baseUrl/transactions/$id');
     final response = await _client.delete(uri);
     if (response.statusCode != 200) {
       throw Exception('Gagal menghapus transaksi (${response.statusCode})');
+    }
+  }
+
+  @override
+  Future<void> flushRedisCache() async {
+    final uri = Uri.parse('$baseUrl/cache/flush');
+    final response = await _client.post(uri);
+    if (response.statusCode != 200) {
+      throw Exception('Gagal mengosongkan Redis cache (${response.statusCode})');
     }
   }
 }

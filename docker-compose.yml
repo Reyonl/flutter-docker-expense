@@ -1,13 +1,20 @@
 # ============================================================================
-# DOCKER COMPOSE — DompetKu Money Expense Tracker (3 Container Stack)
+# DOCKER COMPOSE v2.0 — DompetKu Pro (5-Container Fintech Architecture)
 # ============================================================================
-# File ini mengatur 3 container sekaligus hanya dengan 1 perintah:
+# Mengatur 5 container sekaligus hanya dengan 1 perintah:
 #   docker compose up -d --build
+#
+# Daftar Container:
+#   1. expense-db       (PostgreSQL 16 Alpine) -> Port 5433:5432
+#   2. expense-redis    (Redis 7 Alpine Cache) -> Port 6379:6379
+#   3. expense-adminer  (Database Web GUI)     -> Port 8081:8080
+#   4. expense-backend  (Node.js Express API)  -> Port 4000:4000
+#   5. expense-frontend (Flutter Web + Nginx)  -> Port 8080:80
 # ============================================================================
 
 services:
   # --------------------------------------------------------------------------
-  # CONTAINER 1: Database PostgreSQL (expense-db)
+  # CONTAINER 1: Database Utama PostgreSQL (expense-db)
   # --------------------------------------------------------------------------
   db:
     image: postgres:16-alpine
@@ -18,12 +25,9 @@ services:
       POSTGRES_PASSWORD: dompetku_secret
       POSTGRES_DB: dompetku_db
     ports:
-      # Port laptop 5433 -> Port container 5432 (agar tidak bentrok jika ada Postgres lokal)
       - "5433:5432"
     volumes:
-      # Named Volume: Data database tetap aman walau container dihapus/restart
       - pgdata:/var/lib/postgresql/data
-      # Bind Mount: Otomatis jalankan init.sql saat database pertama kali dibuat
       - ./db/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U dompetku -d dompetku_db"]
@@ -34,7 +38,42 @@ services:
       - expense-net
 
   # --------------------------------------------------------------------------
-  # CONTAINER 2: Backend REST API Node.js + Express (expense-backend)
+  # CONTAINER 2: In-Memory Cache Redis (expense-redis)
+  # --------------------------------------------------------------------------
+  redis:
+    image: redis:7-alpine
+    container_name: expense-redis
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+    networks:
+      - expense-net
+
+  # --------------------------------------------------------------------------
+  # CONTAINER 3: Database Web GUI Adminer (expense-adminer)
+  # Buka di http://localhost:8081 untuk melihat isi tabel PostgreSQL lewat Web
+  # --------------------------------------------------------------------------
+  adminer:
+    image: adminer:latest
+    container_name: expense-adminer
+    restart: unless-stopped
+    environment:
+      ADMINER_DEFAULT_SERVER: db
+    ports:
+      - "8081:8080"
+    depends_on:
+      db:
+        condition: service_healthy
+    networks:
+      - expense-net
+
+  # --------------------------------------------------------------------------
+  # CONTAINER 4: Backend REST API Node.js + Express (expense-backend)
   # --------------------------------------------------------------------------
   backend:
     build:
@@ -44,23 +83,26 @@ services:
     restart: unless-stopped
     environment:
       PORT: 4000
-      # Perhatikan DB_HOST berisi "db" (nama service container di atas!), bukan localhost
       DB_HOST: db
       DB_PORT: 5432
       DB_USER: dompetku
       DB_PASSWORD: dompetku_secret
       DB_NAME: dompetku_db
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
     ports:
-      # Port laptop 4000 -> Port container 4000
       - "4000:4000"
     depends_on:
       db:
+        condition: service_healthy
+      redis:
         condition: service_healthy
     networks:
       - expense-net
 
   # --------------------------------------------------------------------------
-  # CONTAINER 3: Frontend Flutter Web + Nginx (expense-frontend)
+  # CONTAINER 5: Frontend Flutter Web + Nginx (expense-frontend)
+  # Buka di http://localhost:8080
   # --------------------------------------------------------------------------
   frontend:
     build:
@@ -69,7 +111,6 @@ services:
     container_name: expense-frontend
     restart: unless-stopped
     ports:
-      # Port laptop 8080 -> Port container 80 (buka di http://localhost:8080)
       - "8080:80"
     depends_on:
       - backend
