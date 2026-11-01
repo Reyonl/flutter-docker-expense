@@ -91,6 +91,10 @@ def run_selenium_e2e(base_url: str, commit_sha: str, evidence_dir: str) -> dict:
                 "return document.querySelector('flutter-view, flt-glass-pane') !== null && document.readyState === 'complete';"
             )
         )
+        flutter_host = wait.until(
+            EC.presence_of_element_located((By.CSS_SELECTOR, "flutter-view, flt-glass-pane, body"))
+        )
+        dom_tag = flutter_host.tag_name
 
         steps.append(f"Step 5: Capture screenshot evidence to {screenshot_rel}")
         driver.save_screenshot(screenshot_abs)
@@ -100,8 +104,6 @@ def run_selenium_e2e(base_url: str, commit_sha: str, evidence_dir: str) -> dict:
                 msg = entry.get("message", "")
                 if "favicon.ico" not in msg:
                     console_errors.append(msg)
-
-        dom_tag = flutter_host.tag_name
         passed = (
             bool(browser_api_check.get("ok"))
             and len(console_errors) == 0
