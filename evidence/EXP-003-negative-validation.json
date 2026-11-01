@@ -1,7 +1,7 @@
 {
   "id": "EXP-003",
   "status": "PASS",
-  "commit_sha": "e9c2c48c89b64a09432130109098b0449efe3b7e",
+  "commit_sha": "f7a66b3df755ce7639b0de761f3700ab9590725e",
   "exit_code": 0,
   "failures": 0,
   "negative_amount_response": {
@@ -22,13 +22,10 @@
       ]
     }
   },
-  "invalid_type_response": {
-    "status": 400,
+  "not_found_put_response": {
+    "status": 404,
     "body": {
-      "error": "Tipe transaksi (type) harus 'income' atau 'expense'",
-      "errors": [
-        "Tipe transaksi (type) harus 'income' atau 'expense'"
-      ]
+      "error": "Transaksi tidak ditemukan"
     }
   }
 }

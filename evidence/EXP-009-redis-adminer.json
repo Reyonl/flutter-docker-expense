@@ -1,0 +1,16 @@
+{
+  "id": "EXP-009",
+  "status": "PASS",
+  "commit_sha": "f7a66b3df755ce7639b0de761f3700ab9590725e",
+  "exit_code": 0,
+  "failures": 0,
+  "flush_response": {
+    "flushed": true,
+    "message": "Redis cache berhasil dikosongkan. Request summary berikutnya akan bernilai MISS.",
+    "containerId": "97357d47515b"
+  },
+  "first_summary_cache_status": "MISS",
+  "second_summary_cache_status": "HIT",
+  "adminer_http_status": 200,
+  "adminer_title_verified": true
+}

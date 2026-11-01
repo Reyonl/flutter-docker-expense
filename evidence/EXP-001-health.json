@@ -1,27 +1,65 @@
 {
   "id": "EXP-001",
   "status": "PASS",
-  "commit_sha": "e9c2c48c89b64a09432130109098b0449efe3b7e",
+  "commit_sha": "f7a66b3df755ce7639b0de761f3700ab9590725e",
   "exit_code": 0,
   "failures": 0,
   "http_status": 200,
   "health_payload": {
     "status": "ok",
     "db": "connected",
-    "containerId": "7d220a52c817",
+    "redis": "connected",
+    "containerId": "97357d47515b",
     "platform": "Linux 6.18.54.1-microsoft-standard-WSL2",
-    "timestamp": "2026-11-01T06:55:22.516Z"
+    "timestamp": "2026-11-01T07:37:51.665Z"
   },
+  "running_containers_count": 5,
   "docker_compose_ps": [
     {
-      "Command": "\"docker-entrypoint.s…\"",
-      "CreatedAt": "2026-11-01 13:54:14 +0700 +07",
+      "Command": "\"entrypoint.sh docke…\"",
+      "CreatedAt": "2026-11-01 14:36:09 +0700 +07",
       "Engine": "",
       "ExitCode": 0,
       "Health": "",
-      "ID": "7d220a52c817",
-      "Image": "flutter-docker-expense-backend",
-      "Labels": "com.docker.compose.version=5.6.1,desktop.docker.io/ports.scheme=v2,com.docker.compose.config-hash=024d6e4b16230b10d7f1b48ac9656634699f742a580452e65789789a49b2478d,com.docker.compose.depends_on=db:service_healthy:false,com.docker.compose.image=sha256:d4c94ca19108c4643fc8571f92e22906f1e5c8141146728a8ab632adc88027f1,com.docker.compose.oneoff=False,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,desktop.docker.io/ports/4000/tcp=:4000,com.docker.compose.container-number=1,com.docker.compose.project=flutter-docker-expense,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.service=backend",
+      "ID": "db9cde833faa",
+      "Image": "adminer:latest",
+      "Labels": "com.docker.compose.config-hash=5c2cabb575d36aa270f18961c2319b1579faa03e82ed63e64b97b05de6df8115,com.docker.compose.container-number=1,com.docker.compose.depends_on=db:service_healthy:false,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.version=5.6.1,desktop.docker.io/ports.scheme=v2,com.docker.compose.image=sha256:aeb16dc1ad7f297cfedef858b6fadd7a422103e62ed59ac777508c267c977e28,com.docker.compose.oneoff=False,com.docker.compose.project=flutter-docker-expense,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,com.docker.compose.service=adminer,desktop.docker.io/ports/8080/tcp=:8081",
+      "LocalVolumes": "0",
+      "Mounts": "",
+      "Name": "expense-adminer",
+      "Names": "expense-adminer",
+      "Networks": "flutter-docker-expense_expense-net",
+      "Ports": "0.0.0.0:8081->8080/tcp, [::]:8081->8080/tcp",
+      "Project": "flutter-docker-expense",
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 8080,
+          "PublishedPort": 8081,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 8080,
+          "PublishedPort": 8081,
+          "Protocol": "tcp"
+        }
+      ],
+      "RunningFor": "About a minute ago",
+      "Service": "adminer",
+      "Size": "0B",
+      "State": "running",
+      "Status": "Up About a minute"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-11-01 14:36:10 +0700 +07",
+      "Engine": "",
+      "ExitCode": 0,
+      "Health": "",
+      "ID": "97357d47515b",
+      "Image": "sha256:27fa5e3743264454448b96e5e65c256b5fa44e9acf8d27f380f1f7a2f8b5f17e",
+      "Labels": "desktop.docker.io/ports.scheme=v2,desktop.docker.io/ports/4000/tcp=:4000,com.docker.compose.container-number=1,com.docker.compose.depends_on=db:service_healthy:false,redis:service_healthy:false,com.docker.compose.image=sha256:5928a45c1cb8b0fb82d285cb101551a697dd65117462c452b451b841b5dd1c84,com.docker.compose.project=flutter-docker-expense,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,com.docker.compose.replace=expense-backend,com.docker.compose.service=backend,com.docker.compose.config-hash=1846c31804f9b302984a7afe9934e19812286eda2e256bd2cba58f429395712b,com.docker.compose.oneoff=False,com.docker.compose.version=5.6.1",
       "LocalVolumes": "0",
       "Mounts": "",
       "Name": "expense-backend",
@@ -47,17 +85,17 @@
       "Service": "backend",
       "Size": "0B",
       "State": "running",
-      "Status": "Up 46 seconds"
+      "Status": "Up About a minute"
     },
     {
       "Command": "\"docker-entrypoint.s…\"",
-      "CreatedAt": "2026-11-01 13:54:13 +0700 +07",
+      "CreatedAt": "2026-11-01 14:03:28 +0700 +07",
       "Engine": "",
       "ExitCode": 0,
       "Health": "healthy",
-      "ID": "b4346b799726",
+      "ID": "ea206eb6e53f",
       "Image": "postgres:16-alpine",
-      "Labels": "desktop.docker.io/binds/1/Target=/docker-entrypoint-initdb.d/init.sql,com.docker.compose.config-hash=bd1cb0a80ad92ffa9fdaa875bc4f601f64f9d85353626adfbb6a124c1b77824b,com.docker.compose.depends_on=,com.docker.compose.image=sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28,com.docker.compose.project=flutter-docker-expense,com.docker.compose.version=5.6.1,desktop.docker.io/ports/5432/tcp=:5433,com.docker.compose.oneoff=False,com.docker.compose.service=db,desktop.docker.io/ports.scheme=v2,com.docker.compose.container-number=1,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,desktop.docker.io/binds/1/Source=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\db\\init.sql,desktop.docker.io/binds/1/SourceKind=hostFile",
+      "Labels": "desktop.docker.io/binds/1/SourceKind=hostFile,desktop.docker.io/binds/1/Target=/docker-entrypoint-initdb.d/init.sql,com.docker.compose.config-hash=bd1cb0a80ad92ffa9fdaa875bc4f601f64f9d85353626adfbb6a124c1b77824b,com.docker.compose.container-number=1,com.docker.compose.depends_on=,com.docker.compose.image=sha256:cbf42f0edc946c0bc1b8eeed62403734e1f25dc67a3491455d07a92fdb558b28,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,com.docker.compose.service=db,com.docker.compose.version=5.6.1,desktop.docker.io/binds/1/Source=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\db\\init.sql,desktop.docker.io/ports/5432/tcp=:5433,desktop.docker.io/ports.scheme=v2,com.docker.compose.oneoff=False,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.project=flutter-docker-expense",
       "LocalVolumes": "1",
       "Mounts": "/run/desktop/m…,flutter-docker…",
       "Name": "expense-db",
@@ -79,21 +117,21 @@
           "Protocol": "tcp"
         }
       ],
-      "RunningFor": "About a minute ago",
+      "RunningFor": "34 minutes ago",
       "Service": "db",
       "Size": "0B",
       "State": "running",
-      "Status": "Up About a minute (healthy)"
+      "Status": "Up 34 minutes (healthy)"
     },
     {
       "Command": "\"/docker-entrypoint.…\"",
-      "CreatedAt": "2026-11-01 13:54:14 +0700 +07",
+      "CreatedAt": "2026-11-01 14:36:34 +0700 +07",
       "Engine": "",
       "ExitCode": 0,
       "Health": "",
-      "ID": "fc7627782f8e",
+      "ID": "86ce6f8aa061",
       "Image": "flutter-docker-expense-frontend",
-      "Labels": "com.docker.compose.config-hash=de412bcfd10220aff0d19bd7e9a0d72a1d8228110f37bbba33af4d49c4d0c952,com.docker.compose.container-number=1,com.docker.compose.image=sha256:b4a240374ca1452aa6219cfac616adf82e507ddc18515eb3d009e598b964da98,com.docker.compose.oneoff=False,com.docker.compose.project=flutter-docker-expense,com.docker.compose.service=frontend,desktop.docker.io/ports.scheme=v2,com.docker.compose.depends_on=backend:service_started:false,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,com.docker.compose.version=5.6.1,desktop.docker.io/ports/80/tcp=:8080,maintainer=NGINX Docker Maintainers <docker-maint@nginx.com>",
+      "Labels": "desktop.docker.io/ports/80/tcp=:8080,com.docker.compose.depends_on=backend:service_started:false,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,com.docker.compose.version=5.6.1,desktop.docker.io/ports.scheme=v2,maintainer=NGINX Docker Maintainers <docker-maint@nginx.com>,com.docker.compose.config-hash=de412bcfd10220aff0d19bd7e9a0d72a1d8228110f37bbba33af4d49c4d0c952,com.docker.compose.container-number=1,com.docker.compose.image=sha256:634a1cb7c932b929a4170b1240b3beedb0e50bc33318396a3b8c23acade4c7b0,com.docker.compose.oneoff=False,com.docker.compose.project=flutter-docker-expense,com.docker.compose.replace=expense-frontend,com.docker.compose.service=frontend",
       "LocalVolumes": "0",
       "Mounts": "",
       "Name": "expense-frontend",
@@ -120,6 +158,42 @@
       "Size": "0B",
       "State": "running",
       "Status": "Up About a minute"
+    },
+    {
+      "Command": "\"docker-entrypoint.s…\"",
+      "CreatedAt": "2026-11-01 14:36:09 +0700 +07",
+      "Engine": "",
+      "ExitCode": 0,
+      "Health": "healthy",
+      "ID": "3276f9fba0fd",
+      "Image": "redis:7-alpine",
+      "Labels": "com.docker.compose.depends_on=,com.docker.compose.project=flutter-docker-expense,com.docker.compose.project.config_files=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense\\docker-compose.yml,com.docker.compose.project.working_dir=C:\\Users\\ThinkPad\\.gemini\\antigravity\\scratch\\flutter-docker-expense,com.docker.compose.version=5.6.1,desktop.docker.io/ports.scheme=v2,com.docker.compose.config-hash=26628216a83ae1221d696ccc73e78e636b685aa49eb54abb1aa8d122e7ebd862,com.docker.compose.container-number=1,com.docker.compose.image=sha256:1cf73a2f04808e55a8bd2f5706c2aa0ebb0f71938f93deb7af79f48311cd5cb9,com.docker.compose.oneoff=False,com.docker.compose.service=redis,desktop.docker.io/ports/6379/tcp=:6379",
+      "LocalVolumes": "1",
+      "Mounts": "b79df619424600…",
+      "Name": "expense-redis",
+      "Names": "expense-redis",
+      "Networks": "flutter-docker-expense_expense-net",
+      "Ports": "0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp",
+      "Project": "flutter-docker-expense",
+      "Publishers": [
+        {
+          "URL": "0.0.0.0",
+          "TargetPort": 6379,
+          "PublishedPort": 6379,
+          "Protocol": "tcp"
+        },
+        {
+          "URL": "::",
+          "TargetPort": 6379,
+          "PublishedPort": 6379,
+          "Protocol": "tcp"
+        }
+      ],
+      "RunningFor": "About a minute ago",
+      "Service": "redis",
+      "Size": "0B",
+      "State": "running",
+      "Status": "Up About a minute (healthy)"
     }
   ]
 }
