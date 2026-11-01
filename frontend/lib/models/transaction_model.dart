@@ -62,6 +62,8 @@ class FinancialSummary {
   final int transactionCount;
   final List<CategoryBreakdown> byCategory;
   final String containerId;
+  final String cacheStatus; // 'HIT' | 'MISS'
+  final bool redisConnected;
 
   const FinancialSummary({
     required this.totalIncome,
@@ -70,7 +72,25 @@ class FinancialSummary {
     required this.transactionCount,
     required this.byCategory,
     required this.containerId,
+    this.cacheStatus = 'MISS',
+    this.redisConnected = true,
   });
+
+  double get savingsRatePercent {
+    if (totalIncome <= 0) return 0;
+    return ((totalIncome - totalExpense) / totalIncome * 100).clamp(-100.0, 100.0);
+  }
+
+  double get expenseRatioPercent {
+    if (totalIncome <= 0) return totalExpense > 0 ? 100.0 : 0.0;
+    return (totalExpense / totalIncome * 100).clamp(0.0, 100.0);
+  }
+
+  List<CategoryBreakdown> get expenseCategories =>
+      byCategory.where((c) => c.type == 'expense').toList();
+
+  List<CategoryBreakdown> get incomeCategories =>
+      byCategory.where((c) => c.type == 'income').toList();
 
   factory FinancialSummary.fromJson(Map<String, dynamic> json) {
     final rawList = (json['byCategory'] as List<dynamic>?) ?? const [];
@@ -84,6 +104,8 @@ class FinancialSummary {
           .map(CategoryBreakdown.fromJson)
           .toList(),
       containerId: (json['containerId'] as String?) ?? 'local-dev',
+      cacheStatus: (json['cacheStatus'] as String?) ?? 'MISS',
+      redisConnected: (json['redisConnected'] as bool?) ?? false,
     );
   }
 }

@@ -1,7 +1,7 @@
 {
   "name": "dompetku-backend",
-  "version": "1.0.0",
-  "description": "Node.js Express REST API for DompetKu Flutter Money Expense Tracker (Dockerized)",
+  "version": "2.0.0",
+  "description": "Node.js Express REST API for DompetKu Flutter Money Expense Tracker (Dockerized with PostgreSQL & Redis)",
   "main": "src/server.js",
   "scripts": {
     "start": "node src/server.js",
@@ -11,6 +11,7 @@
   "dependencies": {
     "cors": "^2.8.5",
     "express": "^4.21.2",
-    "pg": "^8.13.3"
+    "pg": "^8.13.3",
+    "redis": "^4.7.0"
   }
 }
