@@ -1,17 +1,17 @@
 {
   "id": "EXP-005",
   "status": "PASS",
-  "commit_sha": "d2abce76173f2f2f060b7de56f2071fd33341863",
+  "commit_sha": "e7c3f9d227ac6461efc6feb7988e4342a4784741",
   "exit_code": 0,
   "failures": 0,
   "sanitized_item": {
-    "id": 21,
+    "id": 25,
     "title": "Beli Kopi Aman",
     "amount": 25000,
     "type": "expense",
     "category": "Makanan",
     "note": "Catatan aman",
-    "createdAt": "2026-11-01T09:15:50.432Z"
+    "createdAt": "2026-11-02T07:32:09.580Z"
   },
   "sqli_search_status": 200,
   "table_intact": true
