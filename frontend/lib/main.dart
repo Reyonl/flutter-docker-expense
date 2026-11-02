@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart'
+    show defaultTargetPlatform, kIsWeb, TargetPlatform;
 import 'package:flutter/material.dart';
 import 'firebase_options.dart';
 import 'models/transaction_model.dart';
@@ -116,6 +118,12 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
   @override
   void initState() {
     super.initState();
+    // Jika berjalan di Android APK nyata (HttpExpenseApiClient), otomatis gunakan Firebase Cloud (dompetku-4a2e1)
+    if (!kIsWeb &&
+        defaultTargetPlatform == TargetPlatform.android &&
+        widget.apiClient is HttpExpenseApiClient) {
+      _activeEngine = 'firebase';
+    }
     _loadData();
   }
 
@@ -148,6 +156,30 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
         _isLoading = false;
       });
     } catch (e) {
+      // Fallback otomatis ke Firebase Cloud bila Docker lokal tidak aktif pada aplikasi nyata
+      if (_activeEngine == 'docker' && widget.apiClient is HttpExpenseApiClient) {
+        try {
+          final fb = widget.firebaseClient ?? FirebaseExpenseApiClient();
+          final fbResults = await Future.wait([
+            fb.fetchSummary(),
+            fb.fetchTransactions(
+              type: _selectedFilter == 'all' ? null : _selectedFilter,
+              search: _searchQuery,
+            ),
+          ]);
+          if (!mounted) return;
+          setState(() {
+            _activeEngine = 'firebase';
+            _summary = fbResults[0] as FinancialSummary;
+            _transactions = fbResults[1] as List<ExpenseTransaction>;
+            _isLoading = false;
+          });
+          return;
+        } catch (_) {
+          // Lanjut tampilkan pesan error di bawah bila kedua engine gagal
+        }
+      }
+
       if (!mounted) return;
       setState(() {
         _errorMessage = e.toString().replaceFirst('Exception: ', '');
@@ -360,18 +392,24 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
         title: Row(
           children: [
             Container(
-              padding: const EdgeInsets.all(8),
+              width: 38,
+              height: 38,
               decoration: BoxDecoration(
-                color: DompetKuColors.primary.withValues(alpha: 0.35),
                 borderRadius: BorderRadius.circular(10),
                 border: Border.all(
-                  color: DompetKuColors.secondary.withValues(alpha: 0.4),
+                  color: DompetKuColors.secondary.withValues(alpha: 0.45),
                 ),
               ),
-              child: const Icon(
-                Icons.account_balance_wallet_outlined,
-                color: DompetKuColors.secondary,
-                size: 22,
+              clipBehavior: Clip.antiAlias,
+              child: Image.asset(
+                'assets/icon/app_icon.png',
+                key: const Key('app-header-logo'),
+                fit: BoxFit.cover,
+                errorBuilder: (_, _, _) => const Icon(
+                  Icons.account_balance_wallet_outlined,
+                  color: DompetKuColors.secondary,
+                  size: 22,
+                ),
               ),
             ),
             const SizedBox(width: 12),
