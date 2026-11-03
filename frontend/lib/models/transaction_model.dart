@@ -6,6 +6,7 @@ class ExpenseTransaction {
   final String category;
   final String note;
   final String createdAt;
+  final String? docId;
 
   const ExpenseTransaction({
     required this.id,
@@ -15,6 +16,7 @@ class ExpenseTransaction {
     required this.category,
     required this.note,
     required this.createdAt,
+    this.docId,
   });
 
   bool get isIncome => type == 'income';
@@ -28,6 +30,7 @@ class ExpenseTransaction {
       category: (json['category'] as String?) ?? 'Lainnya',
       note: (json['note'] as String?) ?? '',
       createdAt: (json['createdAt'] as String?) ?? '',
+      docId: json['docId'] as String?,
     );
   }
 }

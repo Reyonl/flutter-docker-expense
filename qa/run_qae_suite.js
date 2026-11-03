@@ -358,6 +358,9 @@ async function main() {
     total_cloud_documents: fbListRes.body.documents ? fbListRes.body.documents.length : 0,
   });
 
+  // Clean up QAE test record so production cloud database stays completely clean
+  await reqJson(`${FIREBASE_FIRESTORE_URL}/${fbDocId}`, { method: 'DELETE' });
+
   // -------------------------------------------------------------------------
   // EXP-007: Browser E2E via Selenium WebDriver
   // -------------------------------------------------------------------------

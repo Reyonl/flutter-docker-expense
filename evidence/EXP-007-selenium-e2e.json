@@ -1,6 +1,6 @@
 {
   "status": "PASS",
-  "commit_sha": "e479c56ccd0765a7ae59350b14bd22aedcd52bfa",
+  "commit_sha": "e4b2d7af465c751c75ab3c30fa77fe6e222cd9de",
   "exit_code": 0,
   "failures": 0,
   "scenario": "EXP-007: Flutter Web v2.0 Fintech Pro Dashboard (Charts + Edit + Redis HIT/MISS) E2E",
@@ -12,7 +12,7 @@
     "Step 5: Capture screenshot evidence to evidence/EXP-007-selenium-ui.png"
   ],
   "expected_result": "Flutter Web v2.0 loads at http://localhost:8080, executes Create + Edit (PUT), transitions Redis cache from MISS to HIT, and renders with 0 console/network errors.",
-  "actual_result": "Flutter root <body> rendered; containerId=546c752e71e5; editedTitle='Langganan Docker Pro & Redis (Edited)'; cache=MISS->HIT; balance=20125000",
+  "actual_result": "Flutter root <body> rendered; containerId=546c752e71e5; editedTitle='Langganan Docker Pro & Redis (Edited)'; cache=MISS->HIT; balance=21625000",
   "evidence": {
     "screenshot": "evidence/EXP-007-selenium-ui.png",
     "console_errors": [],

@@ -1,10 +1,10 @@
 {
   "id": "EXP-004",
   "status": "PASS",
-  "commit_sha": "e479c56ccd0765a7ae59350b14bd22aedcd52bfa",
+  "commit_sha": "e4b2d7af465c751c75ab3c30fa77fe6e222cd9de",
   "exit_code": 0,
   "failures": 0,
-  "pg_before_restart": "32|28625000.00",
-  "pg_after_restart": "32|28625000.00",
+  "pg_before_restart": "36|31125000.00",
+  "pg_after_restart": "36|31125000.00",
   "backend_reconnected": true
 }

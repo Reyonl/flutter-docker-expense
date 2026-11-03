@@ -300,9 +300,62 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     }
   }
 
+  Future<void> _confirmAndDelete(ExpenseTransaction tx) async {
+    final isDark = widget.isDarkMode;
+    final cardBg = isDark ? DompetKuTheme.darkCard : DompetKuTheme.lightCard;
+    final textPrimary = isDark ? DompetKuTheme.darkText : DompetKuTheme.lightText;
+    final textMuted = isDark ? DompetKuTheme.darkTextMuted : DompetKuTheme.lightTextMuted;
+
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: cardBg,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(16),
+        ),
+        title: Row(
+          children: [
+            const Icon(Icons.delete_forever_rounded, color: DompetKuTheme.expenseRed),
+            const SizedBox(width: 8),
+            Text(
+              'Hapus Transaksi?',
+              style: TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: textPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          'Apakah Anda yakin ingin menghapus transaksi "${tx.title}" (${formatRupiah(tx.amount)})?',
+          style: TextStyle(fontSize: 13, color: textMuted),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Batal'),
+          ),
+          FilledButton(
+            key: const Key('confirm-delete-button'),
+            style: FilledButton.styleFrom(
+              backgroundColor: DompetKuTheme.expenseRed,
+            ),
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Hapus'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirm == true) {
+      await _handleDelete(tx);
+    }
+  }
+
   Future<void> _handleDelete(ExpenseTransaction tx) async {
     try {
-      await _currentClient.deleteTransaction(tx.id);
+      await _currentClient.deleteTransaction(tx.id, docId: tx.docId);
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -1614,7 +1667,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                       color: textMuted,
                       size: 20,
                     ),
-                    onPressed: () => _handleDelete(tx),
+                    onPressed: () => _confirmAndDelete(tx),
                   ),
                 ],
               ),
@@ -2039,6 +2092,65 @@ class _TransactionFormDialogState extends State<TransactionFormDialog> {
         ),
       ),
       actions: [
+        if (_isEditMode)
+          TextButton.icon(
+            key: const Key('dialog-delete-tx-button'),
+            onPressed: _isSubmitting
+                ? null
+                : () async {
+                    final nav = Navigator.of(context);
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (c) => AlertDialog(
+                        title: const Text('Hapus Transaksi?'),
+                        content: Text(
+                          'Yakin ingin menghapus "${widget.existingTransaction!.title}"?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(c).pop(false),
+                            child: const Text('Batal'),
+                          ),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                              backgroundColor: DompetKuTheme.expenseRed,
+                            ),
+                            onPressed: () => Navigator.of(c).pop(true),
+                            child: const Text('Hapus'),
+                          ),
+                        ],
+                      ),
+                    );
+                    if (confirm == true) {
+                      setState(() => _isSubmitting = true);
+                      try {
+                        await widget.apiClient.deleteTransaction(
+                          widget.existingTransaction!.id,
+                          docId: widget.existingTransaction!.docId,
+                        );
+                        nav.pop(true);
+                      } catch (e) {
+                        if (!mounted) return;
+                        setState(() {
+                          _isSubmitting = false;
+                          _submitError = 'Gagal menghapus: $e';
+                        });
+                      }
+                    }
+                  },
+            icon: const Icon(
+              Icons.delete_outline_rounded,
+              color: DompetKuTheme.expenseRed,
+              size: 18,
+            ),
+            label: const Text(
+              'Hapus',
+              style: TextStyle(
+                color: DompetKuTheme.expenseRed,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
         TextButton(
           onPressed:
               _isSubmitting ? null : () => Navigator.of(context).pop(false),
