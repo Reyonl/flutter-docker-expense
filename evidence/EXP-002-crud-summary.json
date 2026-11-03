@@ -1,79 +1,38 @@
 {
   "id": "EXP-002",
   "status": "PASS",
-  "commit_sha": "8293faa27526a39e45085a3dd3c9f0a8fc60e477",
+  "commit_sha": "e479c56ccd0765a7ae59350b14bd22aedcd52bfa",
   "exit_code": 0,
   "failures": 0,
   "created_income": {
     "item": {
-      "id": 27,
+      "id": 31,
       "title": "Bonus Project Docker v2",
       "amount": 2000000,
       "type": "income",
       "category": "Bonus",
       "note": "QAE EXP-002 positive income test",
-      "createdAt": "2026-11-03T08:36:54.078Z"
+      "createdAt": "2026-11-03T08:55:44.336Z"
     },
     "containerId": "546c752e71e5"
   },
   "created_expense": {
     "item": {
-      "id": 28,
+      "id": 32,
       "title": "Langganan Server Cloud",
       "amount": 250000,
       "type": "expense",
       "category": "Tagihan",
       "note": "QAE EXP-002 positive expense test",
-      "createdAt": "2026-11-03T08:36:54.096Z"
+      "createdAt": "2026-11-03T08:55:44.356Z"
     },
     "containerId": "546c752e71e5"
   },
   "summary_before": {
-    "totalIncome": 20500000,
-    "totalExpense": 3375000,
-    "balance": 17125000,
-    "transactionCount": 26,
-    "byCategory": [
-      {
-        "category": "Bonus",
-        "type": "income",
-        "total": 12000000,
-        "count": 6
-      },
-      {
-        "category": "Gaji",
-        "type": "income",
-        "total": 8500000,
-        "count": 1
-      },
-      {
-        "category": "Tagihan",
-        "type": "expense",
-        "total": 2100000,
-        "count": 7
-      },
-      {
-        "category": "Edukasi",
-        "type": "expense",
-        "total": 775000,
-        "count": 5
-      },
-      {
-        "category": "Makanan",
-        "type": "expense",
-        "total": 500000,
-        "count": 7
-      }
-    ],
-    "cacheStatus": "MISS",
-    "redisConnected": true,
-    "containerId": "546c752e71e5"
-  },
-  "summary_after": {
     "totalIncome": 22500000,
-    "totalExpense": 3625000,
-    "balance": 18875000,
-    "transactionCount": 28,
+    "totalExpense": 3875000,
+    "balance": 18625000,
+    "transactionCount": 30,
     "byCategory": [
       {
         "category": "Bonus",
@@ -90,20 +49,61 @@
       {
         "category": "Tagihan",
         "type": "expense",
-        "total": 2350000,
+        "total": 2400000,
         "count": 8
       },
       {
         "category": "Edukasi",
         "type": "expense",
-        "total": 775000,
-        "count": 5
+        "total": 950000,
+        "count": 6
       },
       {
         "category": "Makanan",
         "type": "expense",
-        "total": 500000,
-        "count": 7
+        "total": 525000,
+        "count": 8
+      }
+    ],
+    "cacheStatus": "MISS",
+    "redisConnected": true,
+    "containerId": "546c752e71e5"
+  },
+  "summary_after": {
+    "totalIncome": 24500000,
+    "totalExpense": 4125000,
+    "balance": 20375000,
+    "transactionCount": 32,
+    "byCategory": [
+      {
+        "category": "Bonus",
+        "type": "income",
+        "total": 16000000,
+        "count": 8
+      },
+      {
+        "category": "Gaji",
+        "type": "income",
+        "total": 8500000,
+        "count": 1
+      },
+      {
+        "category": "Tagihan",
+        "type": "expense",
+        "total": 2650000,
+        "count": 9
+      },
+      {
+        "category": "Edukasi",
+        "type": "expense",
+        "total": 950000,
+        "count": 6
+      },
+      {
+        "category": "Makanan",
+        "type": "expense",
+        "total": 525000,
+        "count": 8
       }
     ],
     "cacheStatus": "MISS",

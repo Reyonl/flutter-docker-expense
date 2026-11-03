@@ -148,7 +148,7 @@ class FakeExpenseApiClient implements ExpenseApiClient {
 
 void main() {
   testWidgets(
-      'DompetKu renders balance summary, Redis badge, container badge, and transactions',
+      'DompetKu renders balance summary, charts, and telemetry in Settings Dialog',
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -157,17 +157,29 @@ void main() {
     await tester.pumpWidget(DompetKuApp(apiClient: fakeApi));
     await tester.pumpAndSettle();
 
+    // Verify main screen is clean (no dev telemetry strip by default)
     expect(find.text('DompetKu Docker'), findsOneWidget);
-    expect(find.byKey(const Key('redis-cache-badge')), findsOneWidget);
-    expect(find.text('Redis: HIT'), findsOneWidget);
-    expect(find.byKey(const Key('docker-container-badge')), findsOneWidget);
-    expect(find.text('Container: docker-test-container-01'), findsOneWidget);
+    expect(find.byKey(const Key('home-redis-cache-badge')), findsNothing);
     expect(find.byKey(const Key('donut-chart-card')), findsOneWidget);
     expect(find.byKey(const Key('income-donut-chart-card')), findsOneWidget);
     expect(find.byKey(const Key('cashflow-chart-card')), findsOneWidget);
     expect(find.text('Rp 8.450.000'), findsOneWidget);
     expect(find.text('Gaji Bulanan'), findsOneWidget);
     expect(find.text('Kopi & Sarapan'), findsOneWidget);
+
+    // Open Settings & Backend Dialog
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Pengaturan & Backend'), findsOneWidget);
+    expect(find.byKey(const Key('redis-cache-badge')), findsOneWidget);
+    expect(find.text('Redis: HIT'), findsOneWidget);
+    expect(find.byKey(const Key('docker-container-badge')), findsOneWidget);
+    expect(find.text('Container: docker-test-container-01'), findsOneWidget);
+
+    // Close Dialog
+    await tester.tap(find.text('Tutup'));
+    await tester.pumpAndSettle();
   });
 
   testWidgets(
@@ -273,7 +285,7 @@ void main() {
   });
 
   testWidgets(
-      'Engine Switcher toggles between Docker Stack and Firebase Cloud (dompetku-4a2e1)',
+      'Engine Switcher toggles between Docker Stack and Firebase Cloud (dompetku-4a2e1) in Settings',
       (WidgetTester tester) async {
     await tester.binding.setSurfaceSize(const Size(1280, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
@@ -300,6 +312,10 @@ void main() {
     );
     await tester.pumpAndSettle();
 
+    // Open Settings dialog
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await tester.pumpAndSettle();
+
     expect(find.text('Container: docker-test-container-01'), findsOneWidget);
 
     // Switch to Firebase Cloud engine
@@ -308,7 +324,43 @@ void main() {
 
     expect(find.text('Container: firebase:dompetku-4a2e1'), findsOneWidget);
     expect(find.text('Redis: CLOUD'), findsOneWidget);
+
+    // Close Dialog and verify main dashboard rendered Firebase items
+    await tester.tap(find.text('Tutup'));
+    await tester.pumpAndSettle();
+
     expect(find.text('Saldo Cloud Firestore'), findsOneWidget);
     expect(find.text('Rp 12.000.000'), findsWidgets);
+  });
+
+  testWidgets(
+      'Settings Dialog allows toggling Developer Telemetry bar on home screen',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fakeApi = FakeExpenseApiClient();
+    await tester.pumpWidget(DompetKuApp(apiClient: fakeApi));
+    await tester.pumpAndSettle();
+
+    // Telemetry strip is hidden on home screen by default
+    expect(find.byKey(const Key('home-redis-cache-badge')), findsNothing);
+
+    // Open Settings dialog
+    await tester.tap(find.byKey(const Key('settings-button')));
+    await tester.pumpAndSettle();
+
+    // Toggle on "Tampilkan Bar Telemetri di Beranda"
+    await tester.tap(find.byKey(const Key('toggle-dev-telemetry-switch')));
+    await tester.pumpAndSettle();
+
+    // Close Settings
+    await tester.tap(find.text('Tutup'));
+    await tester.pumpAndSettle();
+
+    // Telemetry strip is now visible on home screen!
+    expect(find.byKey(const Key('home-redis-cache-badge')), findsOneWidget);
+    expect(find.text('Redis: HIT'), findsOneWidget);
+    expect(find.byKey(const Key('home-docker-container-badge')), findsOneWidget);
   });
 }
