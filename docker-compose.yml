@@ -9,7 +9,7 @@
 #   2. expense-redis    (Redis 7 Alpine Cache) -> Port 6379:6379
 #   3. expense-adminer  (Database Web GUI)     -> Port 8081:8080
 #   4. expense-backend  (Node.js Express API)  -> Port 4000:4000
-#   5. expense-frontend (Flutter Web + Nginx)  -> Port 8080:80
+#   5. expense-frontend (Flutter Web + Nginx)  -> Port 8082:80
 # ============================================================================
 
 services:
@@ -102,7 +102,7 @@ services:
 
   # --------------------------------------------------------------------------
   # CONTAINER 5: Frontend Flutter Web + Nginx (expense-frontend)
-  # Buka di http://localhost:8080
+  # Buka di http://localhost:8082
   # --------------------------------------------------------------------------
   frontend:
     build:
@@ -111,7 +111,7 @@ services:
     container_name: expense-frontend
     restart: unless-stopped
     ports:
-      - "8080:80"
+      - "8082:80"
     depends_on:
       - backend
     networks:

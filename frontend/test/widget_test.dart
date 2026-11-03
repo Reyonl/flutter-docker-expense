@@ -150,7 +150,7 @@ void main() {
   testWidgets(
       'DompetKu renders balance summary, Redis badge, container badge, and transactions',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 960));
+    await tester.binding.setSurfaceSize(const Size(1280, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final fakeApi = FakeExpenseApiClient();
@@ -163,6 +163,7 @@ void main() {
     expect(find.byKey(const Key('docker-container-badge')), findsOneWidget);
     expect(find.text('Container: docker-test-container-01'), findsOneWidget);
     expect(find.byKey(const Key('donut-chart-card')), findsOneWidget);
+    expect(find.byKey(const Key('income-donut-chart-card')), findsOneWidget);
     expect(find.byKey(const Key('cashflow-chart-card')), findsOneWidget);
     expect(find.text('Rp 8.450.000'), findsOneWidget);
     expect(find.text('Gaji Bulanan'), findsOneWidget);
@@ -170,9 +171,63 @@ void main() {
   });
 
   testWidgets(
+      'Theme Toggle switches between Dark Mode and Light Mode',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fakeApi = FakeExpenseApiClient();
+    await tester.pumpWidget(DompetKuApp(apiClient: fakeApi));
+    await tester.pumpAndSettle();
+
+    final themeBtn = find.byKey(const Key('theme-toggle-button'));
+    expect(themeBtn, findsOneWidget);
+
+    // Initial is Dark mode (Sun icon for switching to light)
+    expect(find.byIcon(Icons.light_mode_rounded), findsOneWidget);
+
+    // Tap to switch to Light mode
+    await tester.tap(themeBtn);
+    await tester.pumpAndSettle();
+
+    // Now in Light mode (Moon icon for switching back to dark)
+    expect(find.byIcon(Icons.dark_mode_rounded), findsOneWidget);
+
+    // Tap again to switch back to Dark mode
+    await tester.tap(themeBtn);
+    await tester.pumpAndSettle();
+    expect(find.byIcon(Icons.light_mode_rounded), findsOneWidget);
+  });
+
+  testWidgets(
+      'Analysis Tab displays dedicated Donut Pengeluaran, Donut Pemasukan, and Category Breakdown',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fakeApi = FakeExpenseApiClient();
+    await tester.pumpWidget(DompetKuApp(apiClient: fakeApi));
+    await tester.pumpAndSettle();
+
+    // Tap on Tab Analisis & Chart
+    final analysisTab = find.byKey(const Key('tab-analysis'));
+    expect(analysisTab, findsOneWidget);
+    await tester.tap(analysisTab);
+    await tester.pumpAndSettle();
+
+    // Verify Analysis View Elements
+    expect(find.text('Analisis & Chart'), findsWidgets);
+    expect(find.byKey(const Key('donut-chart-card')), findsOneWidget);
+    expect(find.byKey(const Key('income-donut-chart-card')), findsOneWidget);
+    expect(find.byKey(const Key('cashflow-chart-card')), findsOneWidget);
+    expect(find.text('Rincian per Kategori (2)'), findsOneWidget);
+    expect(find.text('Total: 2 Transaksi'), findsOneWidget);
+  });
+
+  testWidgets(
       'TransactionFormDialog validates empty fields, creates transaction, and edits transaction',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 960));
+    await tester.binding.setSurfaceSize(const Size(1280, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final fakeApi = FakeExpenseApiClient();
@@ -203,6 +258,7 @@ void main() {
     expect(find.text('Rp 8.300.000'), findsOneWidget);
 
     // 2. Edit existing transaction #2 ("Kopi & Sarapan" -> "Kopi Spesial", 100000)
+    await tester.ensureVisible(find.byKey(const Key('edit-tx-2')));
     await tester.tap(find.byKey(const Key('edit-tx-2')));
     await tester.pumpAndSettle();
 
@@ -219,7 +275,7 @@ void main() {
   testWidgets(
       'Engine Switcher toggles between Docker Stack and Firebase Cloud (dompetku-4a2e1)',
       (WidgetTester tester) async {
-    await tester.binding.setSurfaceSize(const Size(1280, 960));
+    await tester.binding.setSurfaceSize(const Size(1280, 1600));
     addTearDown(() => tester.binding.setSurfaceSize(null));
 
     final fakeDocker = FakeExpenseApiClient();

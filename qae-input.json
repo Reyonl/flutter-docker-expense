@@ -1,7 +1,7 @@
 {
   "feature": "dompetku-flutter-docker-firebase-v2.5",
-  "commit_sha": "e7c3f9d227ac6461efc6feb7988e4342a4784741",
-  "run_started_at": "2026-11-02T07:31:57.833Z",
+  "commit_sha": "8293faa27526a39e45085a3dd3c9f0a8fc60e477",
+  "run_started_at": "2026-11-03T08:36:53.372Z",
   "expected_criteria": [
     "EXP-001",
     "EXP-002",

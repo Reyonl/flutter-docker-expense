@@ -4,41 +4,102 @@ import '../models/transaction_model.dart';
 
 class FintechChartsPanel extends StatelessWidget {
   final FinancialSummary summary;
+  final bool isDark;
 
-  const FintechChartsPanel({super.key, required this.summary});
+  const FintechChartsPanel({
+    super.key,
+    required this.summary,
+    this.isDark = true,
+  });
 
   static const List<Color> chartPalette = [
     Color(0xFF3B82F6), // Blue
+    Color(0xFF10B981), // Emerald
     Color(0xFFF59E0B), // Amber
     Color(0xFFEC4899), // Pink
     Color(0xFF8B5CF6), // Violet
-    Color(0xFF10B981), // Emerald
     Color(0xFF06B6D4), // Cyan
     Color(0xFFF97316), // Orange
+    Color(0xFF14B8A6), // Teal
   ];
 
   @override
   Widget build(BuildContext context) {
+    final cardBg = isDark ? const Color(0xFF192134) : Colors.white;
+    final borderColor = isDark ? const Color(0x1F94A3B8) : const Color(0xFFE2E8F0);
+    final textPrimary = isDark ? Colors.white : const Color(0xFF0F172A);
+    final textMuted = isDark ? const Color(0xFF94A3B8) : const Color(0xFF64748B);
+    final mutedBg = isDark ? const Color(0xFF101A34) : const Color(0xFFF1F5F9);
+
     return LayoutBuilder(
       builder: (context, constraints) {
-        final isWide = constraints.maxWidth >= 680;
-        final donutCard = _ExpenseDonutCard(summary: summary);
-        final cashflowCard = _CashflowBarCard(summary: summary);
+        final isWide = constraints.maxWidth >= 720;
+        final expenseCard = _DonutChartCard(
+          key: const Key('donut-chart-card'),
+          title: 'Distribusi Pengeluaran',
+          icon: Icons.donut_large_rounded,
+          iconColor: const Color(0xFFDC2626),
+          items: summary.expenseCategories,
+          total: summary.totalExpense,
+          emptyLabel: 'Belum ada data pengeluaran',
+          centerLabel: 'Keluar',
+          isDark: isDark,
+          cardBg: cardBg,
+          borderColor: borderColor,
+          textPrimary: textPrimary,
+          textMuted: textMuted,
+          mutedBg: mutedBg,
+        );
+
+        final incomeCard = _DonutChartCard(
+          key: const Key('income-donut-chart-card'),
+          title: 'Sumber Pemasukan',
+          icon: Icons.pie_chart_rounded,
+          iconColor: const Color(0xFF059669),
+          items: summary.incomeCategories,
+          total: summary.totalIncome,
+          emptyLabel: 'Belum ada data pemasukan',
+          centerLabel: 'Masuk',
+          isDark: isDark,
+          cardBg: cardBg,
+          borderColor: borderColor,
+          textPrimary: textPrimary,
+          textMuted: textMuted,
+          mutedBg: mutedBg,
+        );
+
+        final cashflowCard = _CashflowBarCard(
+          summary: summary,
+          isDark: isDark,
+          cardBg: cardBg,
+          borderColor: borderColor,
+          textPrimary: textPrimary,
+          textMuted: textMuted,
+          mutedBg: mutedBg,
+        );
 
         if (isWide) {
-          return Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
+          return Column(
             children: [
-              Expanded(child: donutCard),
-              const SizedBox(width: 14),
-              Expanded(child: cashflowCard),
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Expanded(child: expenseCard),
+                  const SizedBox(width: 14),
+                  Expanded(child: incomeCard),
+                ],
+              ),
+              const SizedBox(height: 14),
+              cashflowCard,
             ],
           );
         }
 
         return Column(
           children: [
-            donutCard,
+            expenseCard,
+            const SizedBox(height: 12),
+            incomeCard,
             const SizedBox(height: 12),
             cashflowCard,
           ],
@@ -48,56 +109,92 @@ class FintechChartsPanel extends StatelessWidget {
   }
 }
 
-class _ExpenseDonutCard extends StatelessWidget {
-  final FinancialSummary summary;
+class _DonutChartCard extends StatelessWidget {
+  final String title;
+  final IconData icon;
+  final Color iconColor;
+  final List<CategoryBreakdown> items;
+  final double total;
+  final String emptyLabel;
+  final String centerLabel;
+  final bool isDark;
+  final Color cardBg;
+  final Color borderColor;
+  final Color textPrimary;
+  final Color textMuted;
+  final Color mutedBg;
 
-  const _ExpenseDonutCard({required this.summary});
+  const _DonutChartCard({
+    super.key,
+    required this.title,
+    required this.icon,
+    required this.iconColor,
+    required this.items,
+    required this.total,
+    required this.emptyLabel,
+    required this.centerLabel,
+    required this.isDark,
+    required this.cardBg,
+    required this.borderColor,
+    required this.textPrimary,
+    required this.textMuted,
+    required this.mutedBg,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final expenses = summary.expenseCategories;
-    final totalExp = summary.totalExpense;
-
     return Container(
-      key: const Key('donut-chart-card'),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF192134),
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x1F94A3B8)),
+        border: Border.all(color: borderColor),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
-                Icons.donut_large_rounded,
-                size: 18,
-                color: Color(0xFF3B82F6),
-              ),
-              SizedBox(width: 8),
+              Icon(icon, size: 18, color: iconColor),
+              const SizedBox(width: 8),
               Expanded(
                 child: Text(
-                  'Distribusi Pengeluaran (Donut Chart)',
+                  title,
                   overflow: TextOverflow.ellipsis,
                   style: TextStyle(
                     fontSize: 14,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: textPrimary,
                   ),
+                ),
+              ),
+              Text(
+                formatRupiah(total),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.w700,
+                  color: iconColor,
                 ),
               ),
             ],
           ),
           const SizedBox(height: 16),
-          if (expenses.isEmpty || totalExp <= 0)
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 28),
+          if (items.isEmpty || total <= 0)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 28),
               child: Center(
                 child: Text(
-                  'Belum ada data pengeluaran',
-                  style: TextStyle(color: Color(0xFF94A3B8), fontSize: 13),
+                  emptyLabel,
+                  style: TextStyle(color: textMuted, fontSize: 13),
                 ),
               ),
             )
@@ -105,40 +202,41 @@ class _ExpenseDonutCard extends StatelessWidget {
             Row(
               children: [
                 SizedBox(
-                  width: 130,
-                  height: 130,
+                  width: 124,
+                  height: 124,
                   child: Stack(
                     alignment: Alignment.center,
                     children: [
                       CustomPaint(
-                        size: const Size(130, 130),
+                        size: const Size(124, 124),
                         painter: _DonutChartPainter(
-                          items: expenses,
-                          total: totalExp,
+                          items: items,
+                          total: total,
                           colors: FintechChartsPanel.chartPalette,
+                          trackColor: mutedBg,
                         ),
                       ),
                       Column(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          const Text(
-                            'Keluar',
+                          Text(
+                            centerLabel,
                             style: TextStyle(
                               fontSize: 10,
-                              color: Color(0xFF94A3B8),
+                              color: textMuted,
                             ),
                           ),
                           const SizedBox(height: 2),
                           Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 14),
+                            padding: const EdgeInsets.symmetric(horizontal: 10),
                             child: FittedBox(
                               fit: BoxFit.scaleDown,
                               child: Text(
-                                '${expenses.length} Kat',
-                                style: const TextStyle(
+                                '${items.length} Kat',
+                                style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w800,
-                                  color: Colors.white,
+                                  color: textPrimary,
                                 ),
                               ),
                             ),
@@ -153,45 +251,45 @@ class _ExpenseDonutCard extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: List.generate(
-                      expenses.take(5).length,
+                      items.take(4).length,
                       (index) {
-                        final item = expenses[index];
+                        final item = items[index];
                         final color = FintechChartsPanel.chartPalette[
                             index % FintechChartsPanel.chartPalette.length];
                         final pct =
-                            totalExp > 0 ? (item.total / totalExp * 100) : 0.0;
+                            total > 0 ? (item.total / total * 100) : 0.0;
 
                         return Padding(
-                          padding: const EdgeInsets.only(bottom: 8),
+                          padding: const EdgeInsets.only(bottom: 6),
                           child: Row(
                             children: [
                               Container(
-                                width: 10,
-                                height: 10,
+                                width: 9,
+                                height: 9,
                                 decoration: BoxDecoration(
                                   color: color,
                                   borderRadius: BorderRadius.circular(3),
                                 ),
                               ),
-                              const SizedBox(width: 8),
+                              const SizedBox(width: 6),
                               Expanded(
                                 child: Text(
                                   item.category,
                                   overflow: TextOverflow.ellipsis,
-                                  style: const TextStyle(
-                                    fontSize: 12,
-                                    color: Colors.white,
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    color: textPrimary,
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
                               ),
-                              const SizedBox(width: 6),
+                              const SizedBox(width: 4),
                               Text(
                                 '${pct.toStringAsFixed(0)}%',
-                                style: const TextStyle(
-                                  fontSize: 12,
+                                style: TextStyle(
+                                  fontSize: 11,
                                   fontWeight: FontWeight.w700,
-                                  color: Color(0xFF94A3B8),
+                                  color: textMuted,
                                 ),
                               ),
                             ],
@@ -213,21 +311,23 @@ class _DonutChartPainter extends CustomPainter {
   final List<CategoryBreakdown> items;
   final double total;
   final List<Color> colors;
+  final Color trackColor;
 
   _DonutChartPainter({
     required this.items,
     required this.total,
     required this.colors,
+    required this.trackColor,
   });
 
   @override
   void paint(Canvas canvas, Size size) {
     final center = Offset(size.width / 2, size.height / 2);
-    final radius = math.min(size.width, size.height) / 2 - 10;
-    const strokeWidth = 18.0;
+    final radius = math.min(size.width, size.height) / 2 - 8;
+    const strokeWidth = 16.0;
 
     final bgPaint = Paint()
-      ..color = const Color(0xFF101A34)
+      ..color = trackColor
       ..style = PaintingStyle.stroke
       ..strokeWidth = strokeWidth;
 
@@ -248,7 +348,6 @@ class _DonutChartPainter extends CustomPainter {
         ..strokeWidth = strokeWidth
         ..strokeCap = StrokeCap.butt;
 
-      // Small gap between segments if more than 1 category
       final gap = items.length > 1 ? 0.04 : 0.0;
       final effectiveSweep = math.max(0.02, sweepAngle - gap);
 
@@ -259,14 +358,30 @@ class _DonutChartPainter extends CustomPainter {
 
   @override
   bool shouldRepaint(covariant _DonutChartPainter oldDelegate) {
-    return oldDelegate.total != total || oldDelegate.items.length != items.length;
+    return oldDelegate.total != total ||
+        oldDelegate.items.length != items.length ||
+        oldDelegate.trackColor != trackColor;
   }
 }
 
 class _CashflowBarCard extends StatelessWidget {
   final FinancialSummary summary;
+  final bool isDark;
+  final Color cardBg;
+  final Color borderColor;
+  final Color textPrimary;
+  final Color textMuted;
+  final Color mutedBg;
 
-  const _CashflowBarCard({required this.summary});
+  const _CashflowBarCard({
+    required this.summary,
+    required this.isDark,
+    required this.cardBg,
+    required this.borderColor,
+    required this.textPrimary,
+    required this.textMuted,
+    required this.mutedBg,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -277,7 +392,6 @@ class _CashflowBarCard extends StatelessWidget {
     final expRatio = (exp / maxVal).clamp(0.04, 1.0);
     final savingsRate = summary.savingsRatePercent;
 
-    final isHealthy = savingsRate >= 20;
     final statusLabel = savingsRate >= 20
         ? 'Cashflow Sehat'
         : (savingsRate >= 0 ? 'Perlu Hemat' : 'Defisit Anggaran');
@@ -289,9 +403,18 @@ class _CashflowBarCard extends StatelessWidget {
       key: const Key('cashflow-chart-card'),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: const Color(0xFF192134),
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0x1F94A3B8)),
+        border: Border.all(color: borderColor),
+        boxShadow: isDark
+            ? null
+            : [
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.04),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
+                ),
+              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -299,15 +422,15 @@ class _CashflowBarCard extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Expanded(
+              Expanded(
                 child: Row(
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.bar_chart_rounded,
                       size: 18,
                       color: Color(0xFF059669),
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Flexible(
                       child: Text(
                         'Analisis Cashflow & Rasio Tabungan',
@@ -315,7 +438,7 @@ class _CashflowBarCard extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.w700,
-                          color: Colors.white,
+                          color: textPrimary,
                         ),
                       ),
                     ),
@@ -334,7 +457,7 @@ class _CashflowBarCard extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
-                    color: isHealthy ? const Color(0xFF34D399) : statusColor,
+                    color: statusColor,
                   ),
                 ),
               ),
@@ -346,6 +469,8 @@ class _CashflowBarCard extends StatelessWidget {
             amountText: formatRupiah(inc),
             ratio: incRatio,
             color: const Color(0xFF059669),
+            textMuted: textMuted,
+            trackColor: mutedBg,
           ),
           const SizedBox(height: 14),
           _buildBarRow(
@@ -353,31 +478,33 @@ class _CashflowBarCard extends StatelessWidget {
             amountText: formatRupiah(exp),
             ratio: expRatio,
             color: const Color(0xFFDC2626),
+            textMuted: textMuted,
+            trackColor: mutedBg,
           ),
           const SizedBox(height: 14),
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: const Color(0xFF101A34),
+              color: mutedBg,
               borderRadius: BorderRadius.circular(10),
             ),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Expanded(
+                Expanded(
                   child: Text(
                     'Rasio Pengeluaran vs Pemasukan',
                     overflow: TextOverflow.ellipsis,
-                    style: TextStyle(fontSize: 11, color: Color(0xFF94A3B8)),
+                    style: TextStyle(fontSize: 11, color: textMuted),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Text(
                   '${summary.expenseRatioPercent.toStringAsFixed(1)}% terpakai',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w700,
-                    color: Colors.white,
+                    color: textPrimary,
                   ),
                 ),
               ],
@@ -393,6 +520,8 @@ class _CashflowBarCard extends StatelessWidget {
     required String amountText,
     required double ratio,
     required Color color,
+    required Color textMuted,
+    required Color trackColor,
   }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -404,9 +533,9 @@ class _CashflowBarCard extends StatelessWidget {
               child: Text(
                 label,
                 overflow: TextOverflow.ellipsis,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 12,
-                  color: Color(0xFF94A3B8),
+                  color: textMuted,
                   fontWeight: FontWeight.w500,
                 ),
               ),
@@ -428,7 +557,7 @@ class _CashflowBarCard extends StatelessWidget {
           child: LinearProgressIndicator(
             value: ratio,
             minHeight: 12,
-            backgroundColor: const Color(0xFF101A34),
+            backgroundColor: trackColor,
             valueColor: AlwaysStoppedAnimation<Color>(color),
           ),
         ),
