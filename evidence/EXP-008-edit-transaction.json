@@ -1,16 +1,16 @@
 {
   "id": "EXP-008",
   "status": "PASS",
-  "commit_sha": "8293faa27526a39e45085a3dd3c9f0a8fc60e477",
+  "commit_sha": "e479c56ccd0765a7ae59350b14bd22aedcd52bfa",
   "exit_code": 0,
   "failures": 0,
   "updated_transaction": {
-    "id": 28,
+    "id": 32,
     "title": "Langganan Server Cloud & Redis (Edited)",
     "amount": 300000,
     "type": "expense",
     "category": "Tagihan",
     "note": "Telah diedit melalui PUT /api/transactions/:id",
-    "createdAt": "2026-11-03T08:36:54.096Z"
+    "createdAt": "2026-11-03T08:55:44.356Z"
   }
 }

@@ -45,11 +45,13 @@ class DompetKuTheme {
 class DompetKuApp extends StatefulWidget {
   final ExpenseApiClient apiClient;
   final ExpenseApiClient? firebaseClient;
+  final bool initialShowDevTelemetry;
 
   const DompetKuApp({
     super.key,
     required this.apiClient,
     this.firebaseClient,
+    this.initialShowDevTelemetry = false,
   });
 
   @override
@@ -100,6 +102,7 @@ class _DompetKuAppState extends State<DompetKuApp> {
         firebaseClient: widget.firebaseClient,
         isDarkMode: _isDarkMode,
         onToggleTheme: _toggleTheme,
+        initialShowDevTelemetry: widget.initialShowDevTelemetry,
       ),
     );
   }
@@ -110,6 +113,7 @@ class ExpenseDashboardPage extends StatefulWidget {
   final ExpenseApiClient? firebaseClient;
   final bool isDarkMode;
   final VoidCallback onToggleTheme;
+  final bool initialShowDevTelemetry;
 
   const ExpenseDashboardPage({
     super.key,
@@ -117,6 +121,7 @@ class ExpenseDashboardPage extends StatefulWidget {
     this.firebaseClient,
     required this.isDarkMode,
     required this.onToggleTheme,
+    this.initialShowDevTelemetry = false,
   });
 
   @override
@@ -128,6 +133,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
   List<ExpenseTransaction> _transactions = const [];
   bool _isLoading = true;
   bool _isSyncingFirebase = false;
+  late bool _showDevTelemetry;
   String? _errorMessage;
   String _selectedFilter = 'all'; // 'all' | 'income' | 'expense'
   String _searchQuery = '';
@@ -163,6 +169,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
   @override
   void initState() {
     super.initState();
+    _showDevTelemetry = widget.initialShowDevTelemetry;
     // Jika berjalan di Android APK fisik (HttpExpenseApiClient), default ke Firebase Cloud
     if (!kIsWeb &&
         defaultTargetPlatform == TargetPlatform.android &&
@@ -331,6 +338,327 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
     }
   }
 
+  void _showSettingsDialog() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) {
+        return StatefulBuilder(
+          builder: (dialogCtx, setDialogState) {
+            final isDark = widget.isDarkMode;
+            final cardBg = isDark ? DompetKuTheme.darkCard : DompetKuTheme.lightCard;
+            final border = isDark ? DompetKuTheme.darkBorder : DompetKuTheme.lightBorder;
+            final textPrimary = isDark ? DompetKuTheme.darkText : DompetKuTheme.lightText;
+            final textMuted = isDark ? DompetKuTheme.darkTextMuted : DompetKuTheme.lightTextMuted;
+            final isDocker = _activeEngine == 'docker';
+            final summary = _summary;
+            final isHit = summary?.cacheStatus == 'HIT' || summary?.cacheStatus == 'CLOUD';
+            final badgeColor = isHit ? DompetKuTheme.incomeGreen : DompetKuTheme.warningAmber;
+
+            return AlertDialog(
+              backgroundColor: cardBg,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+                side: BorderSide(color: border),
+              ),
+              contentPadding: const EdgeInsets.fromLTRB(20, 20, 20, 16),
+              title: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: DompetKuTheme.secondary.withValues(alpha: 0.15),
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.settings_rounded,
+                      color: DompetKuTheme.secondary,
+                      size: 20,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Text(
+                      'Pengaturan & Backend',
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.w700,
+                        color: textPrimary,
+                      ),
+                    ),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.close_rounded, size: 20),
+                    onPressed: () => Navigator.of(ctx).pop(),
+                  ),
+                ],
+              ),
+              content: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'DATABASE & STORAGE ENGINE',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Pilih engine penyimpanan data transaksi:',
+                        style: TextStyle(fontSize: 12, color: textPrimary),
+                      ),
+                      const SizedBox(height: 10),
+                      Wrap(
+                        spacing: 8,
+                        runSpacing: 8,
+                        children: [
+                          ChoiceChip(
+                            key: const Key('engine-docker-chip'),
+                            label: const Text('🐳 Docker Stack'),
+                            selected: isDocker,
+                            onSelected: (_) {
+                              if (_activeEngine != 'docker') {
+                                setState(() => _activeEngine = 'docker');
+                                setDialogState(() {});
+                                _loadData();
+                              }
+                            },
+                            selectedColor: DompetKuTheme.primary,
+                            backgroundColor: cardBg,
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: isDocker ? Colors.white : textMuted,
+                            ),
+                          ),
+                          ChoiceChip(
+                            key: const Key('engine-firebase-chip'),
+                            label: const Text('🔥 Firebase Cloud (dompetku-4a2e1)'),
+                            selected: !isDocker,
+                            onSelected: (_) {
+                              if (_activeEngine != 'firebase') {
+                                setState(() => _activeEngine = 'firebase');
+                                setDialogState(() {});
+                                _loadData();
+                              }
+                            },
+                            selectedColor: DompetKuTheme.warningAmber.withValues(alpha: 0.28),
+                            backgroundColor: cardBg,
+                            labelStyle: TextStyle(
+                              fontSize: 12,
+                              fontWeight: FontWeight.w700,
+                              color: !isDocker ? DompetKuTheme.warningAmber : textMuted,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: (isDocker ? DompetKuTheme.primary : DompetKuTheme.warningAmber)
+                              .withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(
+                            color: (isDocker ? DompetKuTheme.primary : DompetKuTheme.warningAmber)
+                                .withValues(alpha: 0.25),
+                          ),
+                        ),
+                        child: Text(
+                          isDocker
+                              ? '• Mode Docker: Terhubung ke PostgreSQL & Redis lokal (Port 4000).'
+                              : '• Mode Firebase: Terhubung langsung ke Google Cloud Firestore (tanpa server VPS). Cocok untuk Android!',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: textPrimary,
+                            height: 1.4,
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      ActionChip(
+                        key: const Key('sync-firebase-button'),
+                        avatar: _isSyncingFirebase
+                            ? const SizedBox(
+                                width: 14,
+                                height: 14,
+                                child: CircularProgressIndicator(strokeWidth: 2),
+                              )
+                            : const Icon(
+                                Icons.cloud_upload_outlined,
+                                size: 16,
+                                color: DompetKuTheme.warningAmber,
+                              ),
+                        label: Text(
+                          _isSyncingFirebase ? 'Syncing...' : 'Sync Docker ➔ Firebase Cloud',
+                          style: TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                            color: textPrimary,
+                          ),
+                        ),
+                        backgroundColor: cardBg,
+                        onPressed: _isSyncingFirebase
+                            ? null
+                            : () async {
+                                setDialogState(() {});
+                                await _handleSyncToFirebase();
+                                setDialogState(() {});
+                              },
+                      ),
+                      const Divider(height: 28),
+                      Text(
+                        'DEVELOPER & TELEMETRI CONTAINER',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 10),
+                      if (summary != null)
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: DompetKuTheme.secondary.withValues(alpha: 0.14),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(
+                                  color: DompetKuTheme.secondary.withValues(alpha: 0.4),
+                                ),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  const Icon(
+                                    Icons.dns_outlined,
+                                    size: 14,
+                                    color: DompetKuTheme.secondary,
+                                  ),
+                                  const SizedBox(width: 6),
+                                  Text(
+                                    'Container: ${summary.containerId}',
+                                    key: const Key('docker-container-badge'),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w600,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              decoration: BoxDecoration(
+                                color: badgeColor.withValues(alpha: 0.16),
+                                borderRadius: BorderRadius.circular(20),
+                                border: Border.all(color: badgeColor.withValues(alpha: 0.5)),
+                              ),
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Icon(Icons.bolt_rounded, size: 14, color: badgeColor),
+                                  const SizedBox(width: 4),
+                                  Text(
+                                    'Redis: ${summary.cacheStatus}',
+                                    key: const Key('redis-cache-badge'),
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.w700,
+                                      color: textPrimary,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      const SizedBox(height: 10),
+                      Row(
+                        children: [
+                          OutlinedButton.icon(
+                            key: const Key('flush-redis-button'),
+                            onPressed: () async {
+                              await _handleFlushRedis();
+                              setDialogState(() {});
+                            },
+                            icon: const Icon(Icons.cleaning_services_outlined, size: 15),
+                            label: const Text('Flush Redis', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          OutlinedButton.icon(
+                            key: const Key('adminer-info-button'),
+                            onPressed: () {
+                              Navigator.of(ctx).pop();
+                              _showAdminerGuideDialog();
+                            },
+                            icon: const Icon(Icons.storage_rounded, size: 15),
+                            label: const Text('Info DB', style: TextStyle(fontSize: 12)),
+                            style: OutlinedButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const Divider(height: 28),
+                      Text(
+                        'PREFERENSI TAMPILAN',
+                        style: TextStyle(
+                          fontSize: 11,
+                          fontWeight: FontWeight.w800,
+                          letterSpacing: 0.8,
+                          color: textMuted,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      SwitchListTile(
+                        key: const Key('toggle-dev-telemetry-switch'),
+                        contentPadding: EdgeInsets.zero,
+                        title: Text(
+                          'Tampilkan Bar Telemetri di Beranda',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600, color: textPrimary),
+                        ),
+                        subtitle: Text(
+                          'Tampilkan bar engine & container di layar utama dashboard.',
+                          style: TextStyle(fontSize: 11, color: textMuted),
+                        ),
+                        value: _showDevTelemetry,
+                        onChanged: (val) {
+                          setState(() => _showDevTelemetry = val);
+                          setDialogState(() {});
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+              actions: [
+                FilledButton(
+                  onPressed: () => Navigator.of(ctx).pop(),
+                  child: const Text('Tutup'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
   void _showAdminerGuideDialog() {
     final isDark = widget.isDarkMode;
     final cardBg = isDark ? DompetKuTheme.darkCard : DompetKuTheme.lightCard;
@@ -496,6 +824,42 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           ],
         ),
         actions: [
+          InkWell(
+            key: const Key('appbar-engine-badge'),
+            borderRadius: BorderRadius.circular(20),
+            onTap: _showSettingsDialog,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+              decoration: BoxDecoration(
+                color: (_activeEngine == 'firebase'
+                        ? DompetKuTheme.warningAmber
+                        : DompetKuTheme.secondary)
+                    .withValues(alpha: 0.15),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: (_activeEngine == 'firebase'
+                          ? DompetKuTheme.warningAmber
+                          : DompetKuTheme.secondary)
+                      .withValues(alpha: 0.5),
+                ),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(
+                    _activeEngine == 'firebase' ? '🔥 Cloud' : '🐳 Docker',
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.w700,
+                      color: _activeEngine == 'firebase'
+                          ? DompetKuTheme.warningAmber
+                          : DompetKuTheme.secondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
           IconButton(
             key: const Key('theme-toggle-button'),
             tooltip: isDark ? 'Beralih ke Light Mode' : 'Beralih ke Dark Mode',
@@ -507,24 +871,18 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             ),
           ),
           IconButton(
-            key: const Key('adminer-info-button'),
-            tooltip: 'Info Login Database (Adminer :8081 & Firebase)',
-            onPressed: _showAdminerGuideDialog,
-            icon: const Icon(Icons.storage_rounded, size: 20),
-          ),
-          IconButton(
-            key: const Key('flush-redis-button'),
-            tooltip: 'Flush Redis Cache (Uji MISS vs HIT)',
-            onPressed: _handleFlushRedis,
-            icon: const Icon(Icons.cleaning_services_outlined, size: 20),
-          ),
-          IconButton(
             key: const Key('refresh-button'),
-            tooltip: 'Muat Ulang Data (Uji Redis HIT)',
+            tooltip: 'Muat Ulang Data',
             onPressed: _loadData,
-            icon: const Icon(Icons.refresh_rounded),
+            icon: const Icon(Icons.refresh_rounded, size: 20),
           ),
-          const SizedBox(width: 6),
+          IconButton(
+            key: const Key('settings-button'),
+            tooltip: 'Pengaturan & Engine Backend',
+            onPressed: _showSettingsDialog,
+            icon: const Icon(Icons.settings_outlined, size: 20),
+          ),
+          const SizedBox(width: 8),
         ],
       ),
       floatingActionButton: FloatingActionButton.extended(
@@ -547,7 +905,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
               child: ListView(
                 padding: const EdgeInsets.fromLTRB(16, 10, 16, 92),
                 children: [
-                  if (summary != null)
+                  if (summary != null && _showDevTelemetry)
                     _buildDockerTelemetryStrip(summary, isHit, isDark),
                   if (_errorMessage != null)
                     _buildErrorBanner(_errorMessage!),
@@ -800,7 +1158,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
         crossAxisAlignment: WrapCrossAlignment.center,
         children: [
           ChoiceChip(
-            key: const Key('engine-docker-chip'),
+            key: const Key('home-engine-docker-chip'),
             label: const Text('🐳 Docker Stack'),
             selected: isDocker,
             onSelected: (_) {
@@ -819,7 +1177,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             ),
           ),
           ChoiceChip(
-            key: const Key('engine-firebase-chip'),
+            key: const Key('home-engine-firebase-chip'),
             label: const Text('🔥 Firebase Cloud (dompetku-4a2e1)'),
             selected: !isDocker,
             onSelected: (_) {
@@ -838,7 +1196,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             ),
           ),
           ActionChip(
-            key: const Key('sync-firebase-button'),
+            key: const Key('home-sync-firebase-button'),
             avatar: _isSyncingFirebase
                 ? const SizedBox(
                     width: 12,
@@ -882,7 +1240,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                 const SizedBox(width: 6),
                 Text(
                   'Container: ${summary.containerId}',
-                  key: const Key('docker-container-badge'),
+                  key: const Key('home-docker-container-badge'),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w600,
@@ -906,7 +1264,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                 const SizedBox(width: 4),
                 Text(
                   'Redis: ${summary.cacheStatus}',
-                  key: const Key('redis-cache-badge'),
+                  key: const Key('home-redis-cache-badge'),
                   style: TextStyle(
                     fontSize: 11,
                     fontWeight: FontWeight.w700,
