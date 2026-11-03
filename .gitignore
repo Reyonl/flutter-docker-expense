@@ -10,6 +10,7 @@ npm-debug.log*
 **/.flutter-plugins-dependencies
 **/.packages
 **/pubspec.lock
+*.apk
 
 # Python / QA venv
 .venv/
