@@ -1,8 +1,8 @@
 {
   "feature": "dompetku-flutter-docker-firebase-v2.5",
   "decision": "ACCEPTED",
-  "timestamp": "2026-11-02T07:34:13.959Z",
-  "commit_sha": "e7c3f9d227ac6461efc6feb7988e4342a4784741",
+  "timestamp": "2026-11-03T08:37:54.128Z",
+  "commit_sha": "8293faa27526a39e45085a3dd3c9f0a8fc60e477",
   "environment": {
     "node_version": "v25.2.1",
     "platform": "win32"
@@ -21,8 +21,8 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-001-health.json",
-          "size_bytes": 9650,
-          "last_modified": "2026-11-02T07:31:59.756Z"
+          "size_bytes": 9652,
+          "last_modified": "2026-11-03T08:36:54.022Z"
         }
       ],
       "notes": ""
@@ -41,7 +41,7 @@
         {
           "file": "evidence/EXP-002-crud-summary.json",
           "size_bytes": 2452,
-          "last_modified": "2026-11-02T07:32:00.036Z"
+          "last_modified": "2026-11-03T08:36:54.111Z"
         }
       ],
       "notes": ""
@@ -60,7 +60,7 @@
         {
           "file": "evidence/EXP-003-negative-validation.json",
           "size_bytes": 679,
-          "last_modified": "2026-11-02T07:32:00.179Z"
+          "last_modified": "2026-11-03T08:36:54.144Z"
         }
       ],
       "notes": ""
@@ -79,7 +79,7 @@
         {
           "file": "evidence/EXP-004-db-persistence.json",
           "size_bytes": 248,
-          "last_modified": "2026-11-02T07:32:09.506Z"
+          "last_modified": "2026-11-03T08:36:59.249Z"
         }
       ],
       "notes": ""
@@ -98,7 +98,7 @@
         {
           "file": "evidence/EXP-005-security.json",
           "size_bytes": 404,
-          "last_modified": "2026-11-02T07:32:09.655Z"
+          "last_modified": "2026-11-03T08:36:59.305Z"
         }
       ],
       "notes": ""
@@ -116,8 +116,8 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-006-unit-widget.json",
-          "size_bytes": 1035,
-          "last_modified": "2026-11-02T07:33:26.239Z"
+          "size_bytes": 1036,
+          "last_modified": "2026-11-03T08:37:27.907Z"
         }
       ],
       "notes": ""
@@ -136,13 +136,13 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-007-selenium-e2e.json",
-          "size_bytes": 1396,
-          "last_modified": "2026-11-02T07:33:45.206Z"
+          "size_bytes": 1389,
+          "last_modified": "2026-11-03T08:37:37.427Z"
         },
         {
           "file": "evidence/EXP-007-selenium-ui.png",
-          "size_bytes": 169147,
-          "last_modified": "2026-11-02T07:33:42.460Z"
+          "size_bytes": 154967,
+          "last_modified": "2026-11-03T08:37:35.177Z"
         }
       ],
       "notes": ""
@@ -161,7 +161,7 @@
         {
           "file": "evidence/EXP-008-edit-transaction.json",
           "size_bytes": 416,
-          "last_modified": "2026-11-02T07:33:26.316Z"
+          "last_modified": "2026-11-03T08:37:27.953Z"
         }
       ],
       "notes": ""
@@ -180,7 +180,7 @@
         {
           "file": "evidence/EXP-009-redis-adminer.json",
           "size_bytes": 461,
-          "last_modified": "2026-11-02T07:33:26.569Z"
+          "last_modified": "2026-11-03T08:37:28.117Z"
         }
       ],
       "notes": ""
@@ -198,8 +198,8 @@
       "verified_evidence": [
         {
           "file": "evidence/EXP-010-firebase-cloud.json",
-          "size_bytes": 347,
-          "last_modified": "2026-11-02T07:33:27.011Z"
+          "size_bytes": 346,
+          "last_modified": "2026-11-03T08:37:28.625Z"
         }
       ],
       "notes": ""

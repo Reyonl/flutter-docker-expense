@@ -1,9 +1,9 @@
 {
   "id": "EXP-006",
   "status": "PASS",
-  "commit_sha": "e7c3f9d227ac6461efc6feb7988e4342a4784741",
+  "commit_sha": "8293faa27526a39e45085a3dd3c9f0a8fc60e477",
   "exit_code": 0,
   "failures": 0,
-  "backend_output_tail": "0 test\n> node --test test/api.test.js\n\n✔ Unit: validateTransactionInput rejects negative/zero amounts and strips XSS (8.6381ms)\n✔ Unit: computeSummary calculates income, expense, and balance accurately (1.2028ms)\n✔ API Integration: Health, CRUD + Update, Redis Cache HIT/MISS & validation (602.4242ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 9667.1099\n",
-  "flutter_output_tail": "ThinkPad/.gemini/antigravity/scratch/flutter-docker-expense/frontend/test/widget_test.dart\n00:00 +0: DompetKu renders balance summary, Redis badge, container badge, and transactions\n00:04 +1: TransactionFormDialog validates empty fields, creates transaction, and edits transaction\n00:10 +2: Engine Switcher toggles between Docker Stack and Firebase Cloud (dompetku-4a2e1)\n00:11 +3: All tests passed!\n"
+  "backend_output_tail": ".0 test\n> node --test test/api.test.js\n\n✔ Unit: validateTransactionInput rejects negative/zero amounts and strips XSS (1.2343ms)\n✔ Unit: computeSummary calculates income, expense, and balance accurately (0.2896ms)\n✔ API Integration: Health, CRUD + Update, Redis Cache HIT/MISS & validation (137.863ms)\nℹ tests 3\nℹ suites 0\nℹ pass 3\nℹ fail 0\nℹ cancelled 0\nℹ skipped 0\nℹ todo 0\nℹ duration_ms 2878.5581\n",
+  "flutter_output_tail": "nd transactions\n00:01 +1: Theme Toggle switches between Dark Mode and Light Mode\n00:02 +2: Analysis Tab displays dedicated Donut Pengeluaran, Donut Pemasukan, and Category Breakdown\n00:03 +3: TransactionFormDialog validates empty fields, creates transaction, and edits transaction\n00:05 +4: Engine Switcher toggles between Docker Stack and Firebase Cloud (dompetku-4a2e1)\n00:06 +5: All tests passed!\n"
 }

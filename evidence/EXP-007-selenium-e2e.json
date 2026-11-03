@@ -1,23 +1,23 @@
 {
   "status": "PASS",
-  "commit_sha": "e7c3f9d227ac6461efc6feb7988e4342a4784741",
+  "commit_sha": "8293faa27526a39e45085a3dd3c9f0a8fc60e477",
   "exit_code": 0,
   "failures": 0,
   "scenario": "EXP-007: Flutter Web v2.0 Fintech Pro Dashboard (Charts + Edit + Redis HIT/MISS) E2E",
   "steps": [
-    "Step 1: Open Dockerized Flutter Web Pro Dashboard at http://localhost:8080",
+    "Step 1: Open Dockerized Flutter Web Pro Dashboard at http://localhost:8082",
     "Step 2: Explicit wait for document title and Flutter root element (flutter-view / flt-glass-pane)",
     "Step 3: Verify Nginx proxy for Create, Edit (PUT), and Redis Cache (MISS -> HIT) from browser context",
     "Step 4: Reload Flutter Web UI so it renders with Redis Cache: HIT and Donut/Cashflow Charts",
     "Step 5: Capture screenshot evidence to evidence/EXP-007-selenium-ui.png"
   ],
   "expected_result": "Flutter Web v2.0 loads at http://localhost:8080, executes Create + Edit (PUT), transitions Redis cache from MISS to HIT, and renders with 0 console/network errors.",
-  "actual_result": "Flutter root <body> rendered; containerId=546c752e71e5; editedTitle='Langganan Docker Pro & Redis (Edited)'; cache=MISS->HIT; balance=17125000",
+  "actual_result": "Flutter root <body> rendered; containerId=546c752e71e5; editedTitle='Langganan Docker Pro & Redis (Edited)'; cache=MISS->HIT; balance=18625000",
   "evidence": {
     "screenshot": "evidence/EXP-007-selenium-ui.png",
     "console_errors": [],
     "network_errors": [],
-    "dom_state": "Root element <body> active, title='DompetKu Docker Pro \u2014 Fintech Expense & Firebase Cloud'"
+    "dom_state": "Root element <body> active, title='DompetKu Pro \u2014 Fintech Expense & Firebase Cloud'"
   },
   "root_cause": "N/A",
   "recommendation": "All E2E checks passed"
