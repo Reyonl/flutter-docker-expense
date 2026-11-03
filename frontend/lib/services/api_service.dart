@@ -24,7 +24,7 @@ abstract class ExpenseApiClient {
     required String category,
     String note = '',
   });
-  Future<void> deleteTransaction(int id);
+  Future<void> deleteTransaction(int id, {String? docId});
   Future<void> flushRedisCache();
 }
 
@@ -139,7 +139,7 @@ class HttpExpenseApiClient implements ExpenseApiClient {
   }
 
   @override
-  Future<void> deleteTransaction(int id) async {
+  Future<void> deleteTransaction(int id, {String? docId}) async {
     final uri = Uri.parse('$baseUrl/transactions/$id');
     final response = await _client.delete(uri);
     if (response.statusCode != 200) {
@@ -223,6 +223,7 @@ class FirebaseExpenseApiClient implements ExpenseApiClient {
       return (f?['stringValue'] as String?) ?? fallback;
     }
 
+    final docId = docName.isNotEmpty ? docName.split('/').last : null;
     return ExpenseTransaction(
       id: id,
       title: readString('title', 'Tanpa Judul'),
@@ -234,6 +235,7 @@ class FirebaseExpenseApiClient implements ExpenseApiClient {
         'createdAt',
         (doc['createTime'] as String?) ?? DateTime.now().toUtc().toIso8601String(),
       ),
+      docId: docId,
     );
   }
 
@@ -394,9 +396,43 @@ class FirebaseExpenseApiClient implements ExpenseApiClient {
   }
 
   @override
-  Future<void> deleteTransaction(int id) async {
-    final uri = Uri.parse('$_collectionUrl/tx_$id?key=${options.apiKey}');
+  Future<void> deleteTransaction(int id, {String? docId}) async {
+    final targetDocId = (docId != null && docId.isNotEmpty) ? docId : 'tx_$id';
+    final uri = Uri.parse('$_collectionUrl/$targetDocId?key=${options.apiKey}');
     final response = await _client.delete(uri);
+
+    // Jika docId bukan tx_$id, pastikan tx_$id juga dibersihkan
+    if (docId != null && docId != 'tx_$id') {
+      try {
+        final fallbackUri = Uri.parse('$_collectionUrl/tx_$id?key=${options.apiKey}');
+        await _client.delete(fallbackUri);
+      } catch (_) {}
+    }
+
+    // Pastikan jika ada dokumen dengan fields.id == id atau nama tx_qae_live_$id, hapus juga
+    try {
+      final listUri = Uri.parse('$_collectionUrl?pageSize=200&key=${options.apiKey}');
+      final listRes = await _client.get(listUri);
+      if (listRes.statusCode == 200) {
+        final data = jsonDecode(listRes.body) as Map<String, dynamic>;
+        final docs = (data['documents'] as List<dynamic>?) ?? const [];
+        for (final d in docs) {
+          if (d is Map<String, dynamic>) {
+            final f = (d['fields'] as Map<String, dynamic>?) ?? {};
+            final idVal = f['id']?['integerValue']?.toString();
+            final name = (d['name'] as String?) ?? '';
+            if (idVal == id.toString() ||
+                name.endsWith('/tx_$id') ||
+                name.endsWith('/tx_qae_live_$id')) {
+              final tail = name.split('/').last;
+              final cleanUri = Uri.parse('$_collectionUrl/$tail?key=${options.apiKey}');
+              await _client.delete(cleanUri);
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
     if (response.statusCode != 200) {
       throw Exception(
         'Gagal menghapus dari Firebase Firestore (${response.statusCode})',

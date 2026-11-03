@@ -135,7 +135,7 @@ class FakeExpenseApiClient implements ExpenseApiClient {
   }
 
   @override
-  Future<void> deleteTransaction(int id) async {
+  Future<void> deleteTransaction(int id, {String? docId}) async {
     _items.removeWhere((tx) => tx.id == id);
     _cacheStatus = 'MISS';
   }
@@ -362,5 +362,43 @@ void main() {
     expect(find.byKey(const Key('home-redis-cache-badge')), findsOneWidget);
     expect(find.text('Redis: HIT'), findsOneWidget);
     expect(find.byKey(const Key('home-docker-container-badge')), findsOneWidget);
+  });
+
+  testWidgets(
+      'Transaction deletion works via card confirmation dialog and edit dialog',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 1600));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fakeApi = FakeExpenseApiClient();
+    await tester.pumpWidget(DompetKuApp(apiClient: fakeApi));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kopi & Sarapan'), findsOneWidget);
+
+    // 1. Delete via card delete button
+    await tester.tap(find.byKey(const Key('delete-tx-2')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Hapus Transaksi?'), findsOneWidget);
+    await tester.tap(find.byKey(const Key('confirm-delete-button')));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kopi & Sarapan'), findsNothing);
+
+    // 2. Delete remaining transaction ("Gaji Bulanan") via Edit dialog delete button
+    await tester.tap(find.byKey(const Key('edit-tx-1')));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(const Key('dialog-delete-tx-button')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('dialog-delete-tx-button')));
+    await tester.pumpAndSettle();
+
+    // Confirm inside dialog
+    expect(find.text('Hapus Transaksi?'), findsOneWidget);
+    await tester.tap(find.widgetWithText(FilledButton, 'Hapus'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Gaji Bulanan'), findsNothing);
   });
 }

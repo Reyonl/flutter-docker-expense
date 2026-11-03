@@ -1,11 +1,11 @@
 {
   "id": "EXP-010",
   "status": "PASS",
-  "commit_sha": "e479c56ccd0765a7ae59350b14bd22aedcd52bfa",
+  "commit_sha": "e4b2d7af465c751c75ab3c30fa77fe6e222cd9de",
   "exit_code": 0,
   "failures": 0,
   "firebase_project_id": "dompetku-4a2e1",
   "upsert_status": 200,
   "upserted_document_name": "projects/dompetku-4a2e1/databases/(default)/documents/transactions/tx_qae_live_10",
-  "total_cloud_documents": 2
+  "total_cloud_documents": 1
 }
