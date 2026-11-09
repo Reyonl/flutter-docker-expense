@@ -144,6 +144,19 @@ class FakeExpenseApiClient implements ExpenseApiClient {
   Future<void> flushRedisCache() async {
     _cacheStatus = 'MISS';
   }
+
+  @override
+  Future<ParsedAiTransaction> parseNaturalLanguage(String text) async {
+    return ParsedAiTransaction(
+      title: 'Kopi tuku',
+      amount: 27000,
+      type: 'expense',
+      category: 'Makanan',
+      wallet: 'Blu',
+      date: '2026-11-01',
+      advice: 'Nih aku buatin transaksinya ya. Siap dicatat ke Blu.',
+    );
+  }
 }
 
 void main() {
@@ -400,5 +413,64 @@ void main() {
     await tester.pumpAndSettle();
 
     expect(find.text('Gaji Bulanan'), findsNothing);
+  });
+
+  testWidgets(
+      'Budggt Experience: Renders Net Worth Hero card, Budget Pacing, Calendar, and AI Advisor Sheet',
+      (WidgetTester tester) async {
+    await tester.binding.setSurfaceSize(const Size(1280, 2000));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+
+    final fakeApi = FakeExpenseApiClient();
+    await tester.pumpWidget(DompetKuApp(apiClient: fakeApi));
+    await tester.pumpAndSettle();
+
+    // Switch to Budggt Pro tab
+    expect(find.byKey(const Key('tab-budggt')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('tab-budggt')));
+    await tester.pumpAndSettle();
+
+    // 1. Verify Budggt Hero Net Worth Card
+    expect(find.byKey(const Key('budggt-hero-card')), findsOneWidget);
+    expect(find.text('KEKAYAAN BERSIH'), findsOneWidget);
+    expect(find.byKey(const Key('budggt-runway-badge')), findsOneWidget);
+    expect(find.byKey(const Key('budggt-level-name')), findsOneWidget);
+
+    // 2. Verify Budget Pacing Card (Hari 9 dari 30 & Kebutuhan/Keinginan/Tabungan)
+    expect(find.byKey(const Key('budggt-budget-pacing-card')), findsOneWidget);
+    expect(find.text('Progres Pengeluaran'), findsOneWidget);
+    expect(find.text('KEBUTUHAN'), findsOneWidget);
+    expect(find.text('TABUNGAN'), findsOneWidget);
+
+    // 3. Verify Financial Calendar Card (Aktivitas Bulan Ini)
+    expect(find.byKey(const Key('budggt-calendar-card')), findsOneWidget);
+    expect(find.text('Aktivitas Bulan Ini'), findsOneWidget);
+
+    // 4. Open AI Advisor Bottom Sheet
+    expect(find.byKey(const Key('open-ai-advisor-fab')), findsOneWidget);
+    await tester.tap(find.byKey(const Key('open-ai-advisor-fab')));
+    await tester.pumpAndSettle();
+
+    // Verify AI sheet opened
+    expect(find.text('AI Advisor'), findsOneWidget);
+    expect(find.text('1897'), findsOneWidget);
+
+    // Enter prompt "Beli kopi tuku 27rb blu"
+    await tester.enterText(find.byKey(const Key('ai-advisor-input-field')), 'Beli kopi tuku 27rb blu');
+    await tester.tap(find.byKey(const Key('ai-advisor-send-button')));
+    await tester.pumpAndSettle();
+
+    // Verify interactive draft card appears with approve button
+    expect(find.byKey(const Key('ai-draft-card')), findsOneWidget);
+    expect(find.text('Kopi tuku'), findsOneWidget);
+    expect(find.byKey(const Key('ai-approve-button')), findsOneWidget);
+
+    // Scroll down inside the sheet and approve draft
+    await tester.drag(find.byType(ListView).last, const Offset(0, -400));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(const Key('ai-approve-button')));
+    await tester.pumpAndSettle();
+
+    expect(fakeApi.fetchTransactions(), completion(hasLength(3)));
   });
 }

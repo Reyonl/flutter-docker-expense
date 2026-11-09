@@ -26,6 +26,7 @@ abstract class ExpenseApiClient {
   });
   Future<void> deleteTransaction(int id, {String? docId});
   Future<void> flushRedisCache();
+  Future<ParsedAiTransaction> parseNaturalLanguage(String text);
 }
 
 class HttpExpenseApiClient implements ExpenseApiClient {
@@ -154,6 +155,22 @@ class HttpExpenseApiClient implements ExpenseApiClient {
     if (response.statusCode != 200) {
       throw Exception('Gagal mengosongkan Redis cache (${response.statusCode})');
     }
+  }
+
+  @override
+  Future<ParsedAiTransaction> parseNaturalLanguage(String text) async {
+    final uri = Uri.parse('$baseUrl/ai/parse-transaction');
+    final response = await _client.post(
+      uri,
+      headers: const {'Content-Type': 'application/json'},
+      body: jsonEncode({'text': text}),
+    );
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    if (response.statusCode != 200) {
+      final errMsg = (data['error'] as String?) ?? 'Gagal memproses kalimat transaksi';
+      throw Exception(errMsg);
+    }
+    return ParsedAiTransaction.fromJson(data);
   }
 }
 
@@ -311,10 +328,14 @@ class FirebaseExpenseApiClient implements ExpenseApiClient {
     final byCategory = catMap.values.toList()
       ..sort((a, b) => b.total.compareTo(a.total));
 
+    final balance = totalIncome - totalExpense;
+
     return FinancialSummary(
       totalIncome: totalIncome,
       totalExpense: totalExpense,
-      balance: totalIncome - totalExpense,
+      balance: balance,
+      netWorth: balance,
+      runwayMonths: totalExpense > 0 ? (balance > 0 ? balance / totalExpense : 0.0) : 21.6,
       transactionCount: allItems.length,
       byCategory: byCategory,
       containerId: 'firebase:${options.projectId}',
@@ -442,8 +463,53 @@ class FirebaseExpenseApiClient implements ExpenseApiClient {
 
   @override
   Future<void> flushRedisCache() async {
-    // Pada mode Firebase Cloud, data langsung diambil real-time dari Firestore.
     return;
+  }
+
+  @override
+  Future<ParsedAiTransaction> parseNaturalLanguage(String text) async {
+    final lower = text.toLowerCase();
+    double amount = 25000;
+    final matchMillion = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:jt|juta)\b').firstMatch(lower);
+    final matchThousand = RegExp(r'(\d+(?:[.,]\d+)?)\s*(?:rb|ribu|k)\b').firstMatch(lower);
+    final matchPlain = RegExp(r'\b(\d{4,12})\b').firstMatch(lower);
+
+    if (matchMillion != null) {
+      amount = (double.tryParse(matchMillion.group(1)!.replaceAll(',', '.')) ?? 1) * 1000000;
+    } else if (matchThousand != null) {
+      amount = (double.tryParse(matchThousand.group(1)!.replaceAll(',', '.')) ?? 25) * 1000;
+    } else if (matchPlain != null) {
+      amount = double.tryParse(matchPlain.group(1)!) ?? 25000;
+    }
+
+    String wallet = 'Blu';
+    if (lower.contains('gopay')) wallet = 'GoPay';
+    if (lower.contains('ovo')) wallet = 'OVO';
+    if (lower.contains('dana')) wallet = 'DANA';
+    if (lower.contains('bca')) wallet = 'BCA';
+    if (lower.contains('cash') || lower.contains('tunai')) wallet = 'Tunai';
+
+    String category = 'Lainnya';
+    if (lower.contains('kopi') || lower.contains('makan') || lower.contains('sate') || lower.contains('padang')) {
+      category = 'Makanan';
+    } else if (lower.contains('bensin') || lower.contains('gojek') || lower.contains('grab')) {
+      category = 'Transportasi';
+    } else if (lower.contains('listrik') || lower.contains('wifi') || lower.contains('tagihan')) {
+      category = 'Tagihan';
+    }
+
+    String title = text.replaceAll(RegExp(r'\b(?:\d+.*|blu|bca|gopay|ovo|dana|cash)\b', caseSensitive: false), '').trim();
+    if (title.isEmpty) title = category;
+
+    return ParsedAiTransaction(
+      title: title,
+      amount: amount,
+      type: 'expense',
+      category: category,
+      wallet: wallet,
+      date: DateTime.now().toIso8601String().split('T')[0],
+      advice: 'Nih aku buatin transaksinya ya. Siap dicatat ke $wallet.',
+    );
   }
 
   /// Menyalin daftar transaksi dari Docker PostgreSQL ke Firebase Cloud Firestore.

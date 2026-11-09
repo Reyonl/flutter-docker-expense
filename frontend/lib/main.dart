@@ -5,6 +5,7 @@ import 'firebase_options.dart';
 import 'models/transaction_model.dart';
 import 'services/api_service.dart';
 import 'widgets/charts_panel.dart';
+import 'widgets/budggt_cards.dart';
 
 void main() {
   runApp(
@@ -373,6 +374,21 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
         ),
       );
     }
+  }
+
+  void _openAiAdvisorSheet() {
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (ctx) => AiAdvisorBottomSheet(
+        apiClient: _currentClient,
+        isDark: widget.isDarkMode,
+        onTransactionAdded: () {
+          _loadData();
+        },
+      ),
+    );
   }
 
   Future<void> _openTransactionDialog({ExpenseTransaction? existing}) async {
@@ -914,6 +930,12 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
             ),
           ),
           IconButton(
+            key: const Key('open-ai-advisor-button'),
+            tooltip: 'AI Advisor & Input Sat-Set',
+            onPressed: _openAiAdvisorSheet,
+            icon: const Text('✨', style: TextStyle(fontSize: 18)),
+          ),
+          IconButton(
             key: const Key('theme-toggle-button'),
             tooltip: isDark ? 'Beralih ke Light Mode' : 'Beralih ke Dark Mode',
             onPressed: widget.onToggleTheme,
@@ -938,16 +960,32 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
           const SizedBox(width: 8),
         ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        key: const Key('open-add-transaction-button'),
-        onPressed: () => _openTransactionDialog(),
-        backgroundColor: DompetKuTheme.secondary,
-        foregroundColor: Colors.white,
-        icon: const Icon(Icons.add_rounded),
-        label: const Text(
-          'Tambah Transaksi',
-          style: TextStyle(fontWeight: FontWeight.w600),
-        ),
+      floatingActionButton: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          FloatingActionButton.extended(
+            key: const Key('open-ai-advisor-fab'),
+            heroTag: 'ai_advisor_fab',
+            onPressed: _openAiAdvisorSheet,
+            backgroundColor: const Color(0xFFFF7A6A),
+            foregroundColor: Colors.white,
+            icon: const Text('✨', style: TextStyle(fontSize: 16)),
+            label: const Text('AI Sat-Set', style: TextStyle(fontWeight: FontWeight.w700)),
+          ),
+          const SizedBox(width: 10),
+          FloatingActionButton.extended(
+            key: const Key('open-add-transaction-button'),
+            heroTag: 'add_tx_fab',
+            onPressed: () => _openTransactionDialog(),
+            backgroundColor: DompetKuTheme.secondary,
+            foregroundColor: Colors.white,
+            icon: const Icon(Icons.add_rounded),
+            label: const Text(
+              'Tambah Transaksi',
+              style: TextStyle(fontWeight: FontWeight.w600),
+            ),
+          ),
+        ],
       ),
       body: SafeArea(
         child: RefreshIndicator(
@@ -965,8 +1003,28 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                   _buildSummaryCards(summary, isDark),
                   const SizedBox(height: 12),
                   _buildSectionNavigator(isDark),
-                  const SizedBox(height: 12),
-                  if (_activeTab == 'analysis') ...[
+                  const SizedBox(height: 14),
+                  if (_activeTab == 'budggt') ...[
+                    if (summary != null) ...[
+                      BudggtHeroNetWorthCard(summary: summary, isDark: isDark),
+                      const SizedBox(height: 14),
+                      BudgetPacingCard(pacing: summary.budgetPacing, isDark: isDark),
+                      const SizedBox(height: 14),
+                      FinancialCalendarCard(
+                        activities: summary.dailyActivities,
+                        isDark: isDark,
+                        onSelectDate: (date) {
+                          setState(() {
+                            _activeTab = 'transactions';
+                            _searchQuery = date;
+                            _searchController.text = date;
+                          });
+                          _loadData();
+                        },
+                      ),
+                      const SizedBox(height: 14),
+                    ],
+                  ] else if (_activeTab == 'analysis') ...[
                     if (summary != null)
                       FintechChartsPanel(summary: summary, isDark: isDark),
                     const SizedBox(height: 14),
@@ -991,6 +1049,8 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
 
   Widget _buildSectionNavigator(bool isDark) {
     final isTrans = _activeTab == 'transactions';
+    final isBudggt = _activeTab == 'budggt';
+    final isAnalysis = _activeTab == 'analysis';
     final cardBg = isDark ? DompetKuTheme.darkCard : DompetKuTheme.lightCard;
     final border = isDark ? DompetKuTheme.darkBorder : DompetKuTheme.lightBorder;
     final textMuted = isDark ? DompetKuTheme.darkTextMuted : DompetKuTheme.lightTextMuted;
@@ -1021,16 +1081,47 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                   children: [
                     Icon(
                       Icons.receipt_long_rounded,
-                      size: 16,
+                      size: 15,
                       color: isTrans ? Colors.white : textMuted,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
-                      'Daftar Transaksi',
+                      'Transaksi',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
                         color: isTrans ? Colors.white : textMuted,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 4),
+          Expanded(
+            child: InkWell(
+              key: const Key('tab-budggt'),
+              borderRadius: BorderRadius.circular(10),
+              onTap: () => setState(() => _activeTab = 'budggt'),
+              child: Container(
+                padding: const EdgeInsets.symmetric(vertical: 9),
+                decoration: BoxDecoration(
+                  color: isBudggt ? const Color(0xFFFF7A6A) : Colors.transparent,
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                alignment: Alignment.center,
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text('✨', style: TextStyle(fontSize: 13)),
+                    const SizedBox(width: 6),
+                    Text(
+                      'Budggt Pro',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                        color: isBudggt ? Colors.white : textMuted,
                       ),
                     ),
                   ],
@@ -1047,7 +1138,7 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
               child: Container(
                 padding: const EdgeInsets.symmetric(vertical: 9),
                 decoration: BoxDecoration(
-                  color: !isTrans ? DompetKuTheme.secondary : Colors.transparent,
+                  color: isAnalysis ? DompetKuTheme.secondary : Colors.transparent,
                   borderRadius: BorderRadius.circular(10),
                 ),
                 alignment: Alignment.center,
@@ -1056,16 +1147,16 @@ class _ExpenseDashboardPageState extends State<ExpenseDashboardPage> {
                   children: [
                     Icon(
                       Icons.analytics_rounded,
-                      size: 16,
-                      color: !isTrans ? Colors.white : textMuted,
+                      size: 15,
+                      color: isAnalysis ? Colors.white : textMuted,
                     ),
-                    const SizedBox(width: 8),
+                    const SizedBox(width: 6),
                     Text(
                       'Analisis & Chart',
                       style: TextStyle(
-                        fontSize: 13,
+                        fontSize: 12,
                         fontWeight: FontWeight.w700,
-                        color: !isTrans ? Colors.white : textMuted,
+                        color: isAnalysis ? Colors.white : textMuted,
                       ),
                     ),
                   ],
