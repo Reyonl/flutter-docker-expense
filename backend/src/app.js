@@ -1,7 +1,12 @@
 const express = require('express');
 const cors = require('cors');
 const os = require('os');
-const { validateTransactionInput, computeSummary, sanitizeString } = require('./validator');
+const {
+  validateTransactionInput,
+  computeSummary,
+  sanitizeString,
+  parseNaturalLanguageTransaction,
+} = require('./validator');
 
 const noopCache = {
   async ping() {
@@ -80,6 +85,49 @@ function createApp(repository, cache = noopCache) {
       });
     } catch (err) {
       return res.status(500).json({ error: 'Gagal mengambil ringkasan keuangan', detail: err.message });
+    }
+  });
+
+  // AI Natural Language Parser (Sat-Set Input ala Budggt)
+  app.post('/api/ai/parse-transaction', async (req, res) => {
+    const text = req.body && typeof req.body.text === 'string' ? req.body.text : '';
+    if (!text.trim()) {
+      return res.status(400).json({ error: 'Field "text" wajib diisi' });
+    }
+
+    const parsed = parseNaturalLanguageTransaction(text);
+    if (!parsed.success) {
+      return res.status(400).json({ error: parsed.error });
+    }
+
+    let advice = `Nih aku buatin transaksinya ya. Siap dicatat ke ${parsed.data.wallet}.`;
+    if (parsed.data.type === 'expense' && parsed.data.amount >= 500000) {
+      advice += ' Pengeluaran ini cukup besar, pastikan dicatat di pos Kebutuhan atau Tabungan.';
+    }
+
+    return res.json({
+      ...parsed,
+      advice,
+      containerId: os.hostname(),
+      creditsRemaining: 1897,
+    });
+  });
+
+  // Kalender Aktivitas Bulanan & Budget Pacing 50/30/20
+  app.get('/api/calendar-summary', async (req, res) => {
+    try {
+      const allTransactions = await repository.listTransactions({});
+      const summary = computeSummary(allTransactions);
+      return res.json({
+        dailyActivities: summary.dailyActivities,
+        budgetPacing: summary.budgetPacing,
+        financialTier: summary.financialTier,
+        runwayMonths: summary.runwayMonths,
+        netWorth: summary.netWorth,
+        containerId: os.hostname(),
+      });
+    } catch (err) {
+      return res.status(500).json({ error: 'Gagal mengambil kalender aktivitas', detail: err.message });
     }
   });
 

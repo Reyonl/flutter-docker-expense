@@ -2,7 +2,11 @@ const test = require('node:test');
 const assert = require('node:assert/strict');
 const http = require('node:http');
 const { createApp } = require('../src/app');
-const { validateTransactionInput, computeSummary } = require('../src/validator');
+const {
+  validateTransactionInput,
+  computeSummary,
+  parseNaturalLanguageTransaction,
+} = require('../src/validator');
 
 function createInMemoryRepo() {
   let seq = 1;
@@ -112,17 +116,54 @@ test('Unit: validateTransactionInput rejects negative/zero amounts and strips XS
   assert.equal(xss.data.note, 'Pedas');
 });
 
-test('Unit: computeSummary calculates income, expense, and balance accurately', () => {
+test('Unit: parseNaturalLanguageTransaction extracts amount, wallet, type, and category', () => {
+  // Test case 1: "Beli kopi tuku 27rb blu"
+  const res1 = parseNaturalLanguageTransaction('Beli kopi tuku 27rb blu');
+  assert.equal(res1.success, true);
+  assert.equal(res1.data.amount, 27000);
+  assert.equal(res1.data.wallet, 'Blu');
+  assert.equal(res1.data.type, 'expense');
+  assert.equal(res1.data.category, 'Makanan');
+  assert.equal(res1.data.title, 'Kopi tuku');
+
+  // Test case 2: "Gaji kantor 8.5jt bca"
+  const res2 = parseNaturalLanguageTransaction('Gaji kantor 8.5jt bca');
+  assert.equal(res2.success, true);
+  assert.equal(res2.data.amount, 8500000);
+  assert.equal(res2.data.wallet, 'BCA');
+  assert.equal(res2.data.type, 'income');
+  assert.equal(res2.data.category, 'Gaji');
+
+  // Test case 3: "Bensin pertamax 50k gopay"
+  const res3 = parseNaturalLanguageTransaction('Bensin pertamax 50k gopay');
+  assert.equal(res3.success, true);
+  assert.equal(res3.data.amount, 50000);
+  assert.equal(res3.data.wallet, 'GoPay');
+  assert.equal(res3.data.category, 'Transportasi');
+
+  // Negative test: empty string
+  const resEmpty = parseNaturalLanguageTransaction('');
+  assert.equal(resEmpty.success, false);
+});
+
+test('Unit: computeSummary calculates income, expense, Net Worth, Runway, and Budget Pacing accurately', () => {
   const summary = computeSummary([
-    { amount: 5000000, type: 'income', category: 'Gaji' },
-    { amount: 150000, type: 'expense', category: 'Makanan' },
-    { amount: 50000, type: 'expense', category: 'Makanan' },
+    { amount: 5000000, type: 'income', category: 'Gaji', createdAt: '2026-11-01T08:00:00Z' },
+    { amount: 150000, type: 'expense', category: 'Makanan', createdAt: '2026-11-01T12:00:00Z' },
+    { amount: 50000, type: 'expense', category: 'Makanan', createdAt: '2026-11-02T10:00:00Z' },
+    { amount: 1000000, type: 'income', category: 'Investasi', createdAt: '2026-11-03T10:00:00Z' },
   ]);
-  assert.equal(summary.totalIncome, 5000000);
+  assert.equal(summary.totalIncome, 6000000);
   assert.equal(summary.totalExpense, 200000);
-  assert.equal(summary.balance, 4800000);
-  assert.equal(summary.transactionCount, 3);
-  assert.equal(summary.byCategory.length, 2);
+  assert.equal(summary.balance, 5800000);
+  assert.equal(summary.netWorth, 5800000);
+  assert.ok(summary.runwayMonths > 0);
+  assert.ok(summary.financialTier.currentLevel);
+  assert.ok(summary.budgetPacing.needs);
+  assert.ok(summary.budgetPacing.wants);
+  assert.ok(summary.budgetPacing.savings);
+  assert.ok(summary.dailyActivities.length >= 2);
+  assert.equal(summary.transactionCount, 4);
 });
 
 test('API Integration: Health, CRUD + Update, Redis Cache HIT/MISS & validation', async () => {
@@ -172,6 +213,8 @@ test('API Integration: Health, CRUD + Update, Redis Cache HIT/MISS & validation'
     assert.equal(sumMiss.status, 200);
     assert.equal(sumMiss.data.cacheStatus, 'MISS');
     assert.equal(sumMiss.data.balance, 2880000);
+    assert.equal(sumMiss.data.netWorth, 2880000);
+    assert.ok(sumMiss.data.runwayMonths > 0);
 
     // 5. Second Summary Call -> Redis Cache HIT
     const sumHit = await requestJson(baseUrl, '/api/summary');
@@ -213,7 +256,24 @@ test('API Integration: Health, CRUD + Update, Redis Cache HIT/MISS & validation'
     });
     assert.equal(notFoundPut.status, 404);
 
-    // 9. Delete Transaction & 404 Check
+    // 9. AI Advisor Parse Transaction endpoint (Budggt Sat-Set feature)
+    const aiRes = await requestJson(baseUrl, '/api/ai/parse-transaction', {
+      method: 'POST',
+      body: { text: 'Beli kopi tuku 27rb blu' },
+    });
+    assert.equal(aiRes.status, 200);
+    assert.equal(aiRes.data.success, true);
+    assert.equal(aiRes.data.data.amount, 27000);
+    assert.equal(aiRes.data.data.wallet, 'Blu');
+    assert.equal(aiRes.data.data.category, 'Makanan');
+
+    // 10. Calendar Summary Endpoint
+    const calRes = await requestJson(baseUrl, '/api/calendar-summary');
+    assert.equal(calRes.status, 200);
+    assert.ok(Array.isArray(calRes.data.dailyActivities));
+    assert.ok(calRes.data.budgetPacing);
+
+    // 11. Delete Transaction & 404 Check
     const del = await requestJson(baseUrl, `/api/transactions/${exp.data.item.id}`, {
       method: 'DELETE',
     });
